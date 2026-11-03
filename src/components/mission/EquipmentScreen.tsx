@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EquipmentItem } from "@/lib/mission/types";
 import {
   CARGO_CAPACITY_T,
@@ -10,6 +10,7 @@ import {
   EQUIPMENT_BY_ID,
 } from "@/lib/mission/equipment";
 import { HudPanel, HudButton, DataRow } from "./HudPanel";
+import { ShipBlueprint, useTickNumber } from "./ShipBlueprint";
 import { halAudio } from "@/lib/mission/audio";
 import { HAL_NO_VLBI, HAL_VLBI_ON } from "@/lib/mission/hal";
 import { cn } from "@/lib/utils";
@@ -42,12 +43,14 @@ export function EquipmentScreen({
   onConfirm: () => void;
   onSpeak: (line: string) => void;
 }) {
+  const [hoverId, setHoverId] = useState<string | null>(null);
   const selected = useMemo(() => new Set(equipment), [equipment]);
   const items = useMemo(
     () => equipment.map((id) => EQUIPMENT_BY_ID.get(id)).filter(Boolean) as EquipmentItem[],
     [equipment]
   );
   const mass = items.reduce((a, e) => a + e.massT, 0);
+  const massTick = useTickNumber(mass, 650);
   const over = mass - CARGO_CAPACITY_T;
   const hasVlbi = selected.has("vlbi");
   const hasPower = selected.has("sps") || selected.has("reactor");
@@ -66,21 +69,37 @@ export function EquipmentScreen({
   };
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[1fr_330px]">
-      {/* ── manifest items ── */}
-      <div className="space-y-3">
-        <div className="hal-mono flex flex-wrap items-center justify-between gap-2 border border-ink/10 bg-black/40 px-3 py-2 text-[10px] tracking-widest text-neutral-500">
-          <span>
-            SEED SHIP EXODUS · PAYLOAD BAY · LAUNCH CAPACITY{" "}
-            <span className="text-amber-300">
-              {CARGO_CAPACITY_T.toLocaleString()} T
+    <div className="space-y-3">
+      {/* ── general arrangement blueprint — modules dock at spine stations ── */}
+      <HudPanel
+        title="General Arrangement — Side Elevation"
+        code="OE-104-GA"
+        accent="phos"
+        bodyClassName="p-2 sm:p-3"
+      >
+        <ShipBlueprint
+          equipment={equipment}
+          onToggle={toggle}
+          hoverId={hoverId}
+          onHover={setHoverId}
+        />
+      </HudPanel>
+
+      <div className="grid gap-3 lg:grid-cols-[1fr_330px]">
+        {/* ── manifest items ── */}
+        <div className="space-y-3">
+          <div className="hal-mono flex flex-wrap items-center justify-between gap-2 border border-ink/10 bg-black/40 px-3 py-2 text-[10px] tracking-widest text-neutral-500">
+            <span>
+              SEED SHIP EXODUS · PAYLOAD BAY · LAUNCH CAPACITY{" "}
+              <span className="text-amber-300">
+                {CARGO_CAPACITY_T.toLocaleString()} T
+              </span>
             </span>
-          </span>
-          <span>
-            FULL MANIFEST <span className="text-neutral-300">2,075 T</span> —
-            EVERY CONFIGURATION IS A SACRIFICE
-          </span>
-        </div>
+            <span>
+              FULL MANIFEST <span className="text-neutral-300">2,075 T</span> —
+              EVERY CONFIGURATION IS A SACRIFICE
+            </span>
+          </div>
 
         {CATEGORIES.map((cat) => (
           <HudPanel
@@ -98,12 +117,15 @@ export function EquipmentScreen({
                   disabled={e.required}
                   aria-pressed={on}
                   aria-label={`${e.name}, ${e.massT} tonnes${e.required ? ", mandatory" : ""}`}
+                  onMouseEnter={() => setHoverId(e.id)}
+                  onMouseLeave={() => setHoverId(null)}
                   className={cn(
                     "block w-full border-b border-ink/5 px-3 py-2.5 text-left transition-colors",
                     e.required
                       ? "cursor-default bg-amber-400/5"
                       : "hover:bg-ink/5",
-                    on && !e.required && "hud-row-selected"
+                    on && !e.required && "hud-row-selected",
+                    hoverId === e.id && "bg-ink/5"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -183,7 +205,7 @@ export function EquipmentScreen({
                     over > 0 ? "text-red-400" : "text-phos"
                   )}
                 >
-                  {mass.toLocaleString()} / {CARGO_CAPACITY_T.toLocaleString()} T
+                  {massTick.toLocaleString()} / {CARGO_CAPACITY_T.toLocaleString()} T
                 </span>
               </div>
               <div className="relative h-3 border border-ink/15 bg-ink/5">
@@ -312,6 +334,7 @@ export function EquipmentScreen({
             )}
           </div>
         </HudPanel>
+      </div>
       </div>
     </div>
   );

@@ -70,6 +70,9 @@ src/
   components/mission/   # the screens and instrument widgets:
                         #   StarSelect, EquipmentScreen, PlanetSelect, TransitPlot,
                         #   OrbitMap, PlanetScan, Starfield3D, …
+                        #   ShipBlueprint — general-arrangement loadout drawing
+                        #                  (module hardpoints, 207 berth dots,
+                        #                   true-scale human, title block)
                         #   Waveform   — HAL's voice channel oscilloscope
                         #   Lissajous  — the 9000's neural pattern display
                         #   ArcGauge   — circular needle gauge (dossier instrument bank)
@@ -84,6 +87,7 @@ src/
                         #   audio.ts      — Web Audio synthesizer
   hooks/
 public/fonts/           # self-hosted IBM Plex Mono
+docs/DESIGN_NOTES.md    # design charter, decisions, and roadmap record
 ```
 
 ## Notes

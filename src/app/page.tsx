@@ -42,7 +42,7 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
   },
   EQUIP: {
     title: "SHIP EQUIPMENT — PAYLOAD MANIFEST",
-    sub: "1,760 tonnes of launch capacity against 2,075 tonnes of equipment. Choose your sacrifices.",
+    sub: "Modules dock at hardpoint stations along the dorsal and ventral spine — watch the general arrangement. 1,760 tonnes of launch capacity against a 2,075-tonne catalog.",
   },
   TRANSIT: { title: "TRANSIT & SURVEY", sub: "" },
   PLANET: {
