@@ -44,7 +44,7 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
   },
   EQUIP: {
     title: "SHIP EQUIPMENT — PAYLOAD MANIFEST",
-    sub: "Modules dock at hardpoint stations along the dorsal and ventral spine — watch the general arrangement. 1,760 tonnes of launch capacity against a 2,075-tonne catalog.",
+    sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,075-tonne catalog.",
   },
   TRANSIT: { title: "TRANSIT & SURVEY", sub: "" },
   PLANET: {

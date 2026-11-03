@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { EquipmentItem } from "@/lib/mission/types";
 import {
   CARGO_CAPACITY_T,
@@ -10,9 +10,13 @@ import {
   EQUIPMENT_BY_ID,
 } from "@/lib/mission/equipment";
 import { HudPanel, HudButton, DataRow } from "@/components/common/HudPanel";
-import { ShipBlueprint, useTickNumber } from "./ShipBlueprint";
+import { ShipBlueprint, useTickNumber, type BlueprintView } from "./ShipBlueprint";
 import { halcyonAudio } from "@/lib/mission/audio";
-import { HALCYON_NO_VLBI, HALCYON_VLBI_ON } from "@/lib/mission/halcyon";
+import {
+  HALCYON_EQUIP_LOADING,
+  HALCYON_NO_VLBI,
+  HALCYON_VLBI_ON,
+} from "@/lib/mission/halcyon";
 import { cn } from "@/lib/utils";
 
 function Check({ on, locked }: { on: boolean; locked?: boolean }) {
@@ -44,6 +48,8 @@ export function EquipmentScreen({
   onSpeak: (line: string) => void;
 }) {
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [view, setView] = useState<BlueprintView>("full");
+  const loadStarted = useRef(false);
   const selected = useMemo(() => new Set(equipment), [equipment]);
   const items = useMemo(
     () => equipment.map((id) => EQUIPMENT_BY_ID.get(id)).filter(Boolean) as EquipmentItem[],
@@ -66,6 +72,12 @@ export function EquipmentScreen({
     if (id === "vlbi" && selected.has("vlbi")) onSpeak(HALCYON_NO_VLBI);
     else if (id === "vlbi" && !selected.has("vlbi")) onSpeak(HALCYON_VLBI_ON);
     onToggle(id);
+    // first loadout action: push the camera in to the cargo ring, where the work is
+    if (!loadStarted.current) {
+      loadStarted.current = true;
+      setView("cargo");
+      onSpeak(HALCYON_EQUIP_LOADING);
+    }
   };
 
   return (
@@ -82,6 +94,8 @@ export function EquipmentScreen({
           onToggle={toggle}
           hoverId={hoverId}
           onHover={setHoverId}
+          view={view}
+          onViewChange={setView}
         />
       </HudPanel>
 
@@ -90,7 +104,7 @@ export function EquipmentScreen({
         <div className="space-y-3">
           <div className="hal-mono flex flex-wrap items-center justify-between gap-2 border border-ink/10 bg-black/40 px-3 py-2 text-[10px] tracking-widest text-neutral-500">
             <span>
-              SEED SHIP EXODUS · PAYLOAD BAY · LAUNCH CAPACITY{" "}
+              SEED SHIP EXODUS · CARGO RING · LAUNCH CAPACITY{" "}
               <span className="text-amber-300">
                 {CARGO_CAPACITY_T.toLocaleString()} T
               </span>

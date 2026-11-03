@@ -188,8 +188,8 @@ export const EQUIPMENT: EquipmentItem[] = [
     massT: 220,
     powerKw: 7,
     reliability: 96,
-    role: "Berth redundancy",
-    desc: "Independent cryogenic bays and power bus for the full complement. If the primary cold-sleep stack fails in year 80 of a 119-year transit, this is the reason there is still a mission in year 81.",
+    role: "Per-bay cryo redundancy",
+    desc: "Independent battery, cryo loop and power bus fitted to each of the twelve bays. If a bay's primary bus fails in year 80 of a 119-year transit, this is the reason there is still a bay — and a cohort — in year 81.",
     effects: { life: 12 },
   },
 ];

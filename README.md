@@ -78,7 +78,10 @@ src/
                         #   star-select/    — StarSelect + Starfield3D (3D local neighborhood)
                         #   equipment/      — EquipmentScreen + ShipBlueprint
                         #                     (general-arrangement loadout drawing:
-                        #                     module hardpoints, 207 berth dots,
+                        #                     Whipple shield, cargo ring, 12
+                        #                     distributed cold-sleep bays,
+                        #                     radiators, aft fuel; 3 camera
+                        #                     presets, 207 berth dots,
                         #                     true-scale human, title block)
                         #   transit/        — TransitScreen + TransitPlot
                         #                     (Kepler-solved arc, live vis-viva plate)

@@ -48,6 +48,9 @@ export function halcyonStarCommitted(star: StarSystem): string {
 export const HALCYON_EQUIP_OPEN =
   "Launch capacity is 1,760 tonnes, Commander. The full manifest is 2,075. Every configuration is a sacrifice — I merely ask that it be an informed one.";
 
+export const HALCYON_EQUIP_LOADING =
+  "Loading operations at the cargo ring, Commander. The containers ride outboard of the debris shadow — every tonne of cargo ahead of the sleepers is a tonne of armour.";
+
 export function halcyonMassExcess(excess: number): string {
   return `I'm afraid that won't be possible, Commander. The manifest exceeds launch capacity by ${excess} tonnes.`;
 }

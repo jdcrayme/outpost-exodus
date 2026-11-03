@@ -389,6 +389,29 @@
   letter-spacing: 0.08em;
 }
 
+/* fuel & thermal hardware — warm metal, reserved for wet mass and heat */
+.bp-copper { stroke: rgba(214, 162, 106, 0.8); fill: none; stroke-width: 0.26; }
+.bp-copper-dim { stroke: rgba(214, 162, 106, 0.45); fill: none; stroke-width: 0.2; }
+
+/* empty cargo-ring container cell */
+.bp-cell { stroke: rgba(232, 230, 220, 0.2); fill: none; stroke-width: 0.14; }
+
+/* zoom-level stamps — cargo codes and telemetry, readable only in close */
+.bp-stamp {
+  fill: #7beba6;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.8px;
+  letter-spacing: 0.06em;
+}
+.bp-stamp-dim {
+  fill: rgba(232, 230, 220, 0.34);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.8px;
+  letter-spacing: 0.06em;
+}
+/* the LOD layer fades in whenever the camera is in close */
+.bp-lod { transition: opacity 0.45s ease; }
+
 @media (prefers-reduced-motion: reduce) {
   .bp-draw { animation-duration: 0.01s; }
   .bp-detail { animation-duration: 0.01s; animation-delay: 0s; }

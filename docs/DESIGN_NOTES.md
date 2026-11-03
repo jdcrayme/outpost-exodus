@@ -55,7 +55,7 @@ starfield auto-rotation ~0.2×. The Discovery's displays drift; they never race.
  EXODUS logo is drawn as vector geometry — planet limb, amber corona bloom,
  traced rim light. Skippable (button, key, or click).
 1. **BOOT** — cold-start diagnostics: the boot log scrolls in line by line, then
-   rolls up out of the way as the 9000's neural pattern stabilizes on a
+   rolls up out of the way as HALCYON's neural pattern stabilizes on a
    Lissajous scope and the initiate button appears.
 2. **STAR** — destination select: 16-star catalog, interactive 3D local
    neighborhood (drag to rotate), dossier with transit solution.
@@ -65,42 +65,73 @@ starfield auto-rotation ~0.2×. The Discovery's displays drift; they never race.
    plate, streaming telemetry.
 5. **PLANET** — VLBI survey: system chart, candidate world list, landing
    dossier with gauges. No probe = blind landing (mass and orbit only).
-6. **PROFILE** — final mission profile; HAL signs off with his waveform.
+6. **PROFILE** — final mission profile; HALCYON signs off with his waveform.
 
 ---
 
-## 3. DONE — Blueprint loadout (general arrangement screen)
+## 3. DONE — Blueprint loadout (general arrangement screen, REV E)
 
 **Goal**: restore what the original game's loadout screen did — modules
-appearing and disappearing *on the outside of the starship*, giving a sense of
-scale — without abandoning the vector/instrument language.
+appearing and disappearing *on the ship*, giving a sense of scale — without
+abandoning the vector/instrument language. REV E rebuilds the ship itself
+from a fusion-ark reference: debris shield, cargo ring along the front of the
+spine, distributed sleeper bays, deployable radiators, fuel in the back.
 
-**Implementation** (`src/screens/equipment/ShipBlueprint.tsx`):
+**Implementation** (`src/screens/equipment/ShipBlueprint.tsx` +
+`src/lib/mission/ship.ts`):
 
 - A **side elevation of the Exodus drawn as an engineering general-arrangement
-  drawing** in SVG, 1 user unit = 1 metre. 225 m overall: command sphere (3
-  command watch berths inside), spine truss, two cold-sleep stack capsules,
-  fusion drive with radiator fins and three engine bells.
-- **Hardpoints as stations**: every payload item has a fixed dorsal/ventral
-  mount addressed like aircraft stations (STA = metres from nose datum). A
-  station ruler with a diamond registry runs along the spine — phosphor when
-  occupied, faint when empty.
-- **Module silhouettes are procedural schematic outlines** — capsule landers
-  with splayed legs, the VLBI probe with its dish, the SPS with panel wings,
-  the refinery's tank train, etc. When toggled onto the manifest they **trace
-  themselves in** (plotter draw-on animation) behind a docking flash; details
-  fade in behind the primary outlines.
-- **The 207 cold-sleep berths are individually countable dots** — 17×6 per
-  stack (102 each) plus 3 command berths in the sphere, with a slow scan sweep.
-  A colony you can count is worth more than any render of one.
-- **Scale**: a 1.76 m human figure at true scale (a grain of rice) next to a
-  0–5–10 m scale bar. Honest scale, architectural-drawing style.
-- **Title block**: DWG OE-104-GA · REV D, live ticking mass readout, CREW 207
-  FROZEN.
-- Hovering a module (in the drawing *or* the manifest list — they are
-  cross-highlighted) shows station data in a status line: `STA 165 V · SEED
-  LANDER — ROBOTIC FOUNDRY · 260 T · MANDATORY`. Clicking a docked module
+  drawing** in SVG, 1 user unit = 1 metre, 225 m overall. Sections fore → aft:
+  - **Whipple debris shield** — three-plate stack, 26 m tall, on standoff
+    struts ahead of the command sphere. Two faint dashed lines draw the
+    **debris shadow cone** it casts down the spine; every berth lives inside
+    it. At 0.1 c a paint flech is a bomb — the shield is the reason there is
+    a front of the ship at all.
+  - **Command sphere** (3 watch berths) directly behind the shield.
+  - **Cargo ring** — 44 container cells in four rows (D2/D1/V1/V2) racked
+    around the forward spine, **deliberately outboard of the shadow**: the
+    cargo is the outermost sacrificial mass between the shield and everything
+    that matters. (The reference's "solar panels" are read as radiators —
+    solar flux is ~nothing at interstellar distances; physics upgrade.)
+  - **Twelve cold-sleep bays** strung along the centreline inside the shadow
+    cone — **one cohort (17 souls) per bay**, staggered clock positions,
+    alternating A/B power buses, 0.95 m of open truss between neighbours: no
+    single catastrophe — strike, fire, bus loss — reaches a second bay.
+    12 × 17 = 204 sleepers + 3 watch = 207, asserted against `CREW_COUNT` in
+    `ship.ts` so the drawing and the mission log can never drift apart.
+  - **Deployable radiators** — 2×2 wing on hinge masts amidships (retract for
+    burn), amber tip lights.
+  - **Aft fuel** — six copper D-He³/deuterium spheres on a tank truss plus two
+    **departure drop-stages** (dashed jettison marks: they go at the Jovian
+    assist, tying the drawing to the astrodynamics in `astro.ts`).
+  - Neutron shadow shield, fusion drive, three bells.
+- **Stowage is data**: `src/lib/mission/ship.ts` holds the architecture —
+  `STOWAGE` (per item: rack cells like `D1-06`, a strongback dock at a STA,
+  or fitted-to-bays), `BAYS`, `RACK` — with module-level arithmetic checks
+  (3 + 12×17 = 207, rack addresses validated). The planned hangar view and
+  crew manifest (§4) consume the same table.
+- **Camera** — three viewBox presets, **FULL SHIP / CARGO RING / CRYO BAYS**,
+  tweened imperatively with rAF (950 ms, eased; instant under
+  prefers-reduced-motion). The screen opens on the establish shot; the first
+  loadout action pushes in to the cargo ring (where the work is); the
+  segmented control in the status line is always available. A **LOD layer**
+  (cargo stamps, per-bay telemetry, plumbing labels) fades in whenever the
+  camera is in close.
+- **The 204 berth dots remain individually countable** — 17 per bay (9 + 8),
+  twelve bays, 3 watch berths in the sphere, with a slow scan sweep cycling
+  down the chain. A colony you can count is worth more than any render.
+- Containerized cargo stows as **highlighted cells with stamped codes**;
+  landers, the SPS, the reactor and the VLBI probe keep their **procedural
+  silhouettes** at strongback docks (probe on a launch cradle at the bow).
+  The cold-sleep reserve battery renders as **per-bay packs plus a redundant
+  phos bus** through the whole chain — redundancy you can see.
+- Hover (drawing ↔ manifest, cross-highlighted) shows station data in the
+  status line — rack address or STA, mass, reliability, power; hovering a bay
+  shows its cohort, souls, cryo setpoint and bus. Clicking docked hardware
   dismounts it.
+- **Scale**: 1.76 m human figure at true scale next to a 0–5–10 m bar.
+- **Title block**: DWG OE-104-GA · **REV E**, live ticking mass readout, CREW
+  207 · 12 BAYS × 17.
 - Mass readouts **tick** like fuel gauges (rAF-eased counters) rather than snap.
 
 **Why silhouettes, not 3D models or sprites** (decision record):
@@ -134,6 +165,9 @@ life support while awake).
 - `crew.ts` in `lib/mission/`, seeded from the mission: name (curated
   multi-region lists), age, role, 5–6 skill axes, cohort/bay assignment,
   one-line service record. **Store only the seed**; regenerate on demand.
+- **The bay layout is already drawn** (REV E): `BAYS` in `ship.ts` (12 bays ×
+  17 souls, alternating buses, staggered clock positions) is the join key for
+  cohort/bay assignment — the manifest plugs straight into the drawing.
 - **Portraits: layered procedural pixel art, 48×48, nearest-neighbor upscale**:
   head shape × skin tone × hair × eyes × age lines × uniform collar with role
   pips. One rendering function per layer — style is consistent by construction.
@@ -178,8 +212,9 @@ colony-start risk event drawn from the seed.
 | `src/app/globals.css` | instrument layer: grid-paper, CRT overlay, draw-on, blueprint classes (`bp-*`) |
 | `src/lib/mission/engine.ts` | `mulberry32`, `hashString`, seeded system generation |
 | `src/lib/mission/equipment.ts` | payload catalog + capacities |
+| `src/lib/mission/ship.ts` | ship architecture — `STOWAGE`, `BAYS`, `RACK`; shared by the blueprint and the future hangar view/crew manifest |
 | `src/screens/intro/` | title card — prologue beats, vector logo, drifting starfield; pacing constants at the top of `IntroScreen.tsx` |
-| `src/screens/equipment/ShipBlueprint.tsx` | GA drawing + MOUNTS table + `useTickNumber` |
+| `src/screens/equipment/ShipBlueprint.tsx` | GA drawing + camera presets + `useTickNumber` |
 | `src/components/common/` | shared instrument widgets (HudPanel bank, Lissajous, PlanetScan, TypeLine); one folder per screen under `src/screens/` |
 
 UI text is uppercase mono with wide tracking; warnings never shout in red
