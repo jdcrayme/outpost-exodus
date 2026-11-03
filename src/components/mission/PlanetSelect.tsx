@@ -70,7 +70,7 @@ export function PlanetSelect({
           code="SURV.02 / CHART"
           bodyClassName="p-0"
         >
-          <div className="h-[300px] sm:h-[360px]">
+          <div className="h-[340px] sm:h-[420px] lg:h-[calc(100vh-26rem)] lg:min-h-[400px]">
             <OrbitMap
               star={star}
               planets={planets}
@@ -86,7 +86,7 @@ export function PlanetSelect({
           accent={hasProbe ? "phos" : "red"}
           bodyClassName="p-0"
         >
-          <div className="hal-scroll max-h-64 overflow-y-auto">
+          <div className="hal-scroll max-h-52 overflow-y-auto">
             {planets.map((p) => {
               const isSel = p.id === selected;
               return (

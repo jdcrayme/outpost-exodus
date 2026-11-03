@@ -112,7 +112,7 @@ export function Starfield3D({
       const dt = Math.min(0.05, (t - lastT) / 1000);
       lastT = t;
       const st = stateRef.current;
-      if (!st.drag && (t - st.lastInteract) / 1000 > 3) st.yaw += dt * 0.07;
+      if (!st.drag && (t - st.lastInteract) / 1000 > 3) st.yaw += dt * 0.014;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);

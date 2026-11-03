@@ -92,6 +92,16 @@ export default function OutpostPage() {
     return () => clearInterval(t);
   }, []);
 
+  // Esc closes the mission log drawer
+  useEffect(() => {
+    if (!logOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLogOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [logOpen]);
+
   // idle HAL chatter
   useEffect(() => {
     if (phase === "BOOT" || phase === "TRANSIT") return;
@@ -390,23 +400,36 @@ export default function OutpostPage() {
         </div>
       </footer>
 
-      {/* ── mission log drawer ── */}
+      {/* ── mission log drawer (below the sticky header, so header controls stay live) ── */}
       <aside
         className={cn(
-          "fixed right-0 top-0 z-[70] h-full w-80 max-w-[85vw] border-l border-ink/15 bg-black/95 transition-transform duration-300",
+          "fixed right-0 top-[3.25rem] z-[70] h-[calc(100%-3.25rem)] w-80 max-w-[85vw] border-l border-ink/15 bg-black/95 transition-transform duration-300",
           logOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-label="Mission log"
+        aria-hidden={!logOpen}
       >
-        <div className="border-b border-ink/10 p-3">
-          <div className="hal-display text-[11px] tracking-[0.25em] text-ink">
-            MISSION LOG
+        <div className="flex items-center justify-between gap-2 border-b border-ink/10 p-3">
+          <div>
+            <div className="hal-display text-[11px] tracking-[0.25em] text-ink">
+              MISSION LOG
+            </div>
+            <div className="mt-0.5 text-[9px] tracking-widest text-neutral-600">
+              {log.length} ENTRIES · AUTO-RECORDED
+            </div>
           </div>
-          <div className="mt-0.5 text-[9px] tracking-widest text-neutral-600">
-            {log.length} ENTRIES · AUTO-RECORDED
-          </div>
+          <button
+            onClick={() => {
+              setLogOpen(false);
+              halAudio.select();
+            }}
+            aria-label="Close mission log"
+            className="flex h-8 w-8 shrink-0 items-center justify-center border border-ink/15 text-neutral-500 transition-colors hover:border-ink/40 hover:text-ink"
+          >
+            <X size={14} />
+          </button>
         </div>
-        <div className="hal-scroll h-[calc(100%-3.4rem)] overflow-y-auto p-3">
+        <div className="hal-scroll h-[calc(100%-4.6rem)] overflow-y-auto p-3">
           {log.length === 0 && (
             <div className="text-[10px] text-neutral-600">NO ENTRIES YET.</div>
           )}
