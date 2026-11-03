@@ -11,8 +11,8 @@ import {
 } from "@/lib/mission/equipment";
 import { HudPanel, HudButton, DataRow } from "@/components/common/HudPanel";
 import { ShipBlueprint, useTickNumber } from "./ShipBlueprint";
-import { halAudio } from "@/lib/mission/audio";
-import { HAL_NO_VLBI, HAL_VLBI_ON } from "@/lib/mission/hal";
+import { halcyonAudio } from "@/lib/mission/audio";
+import { HALCYON_NO_VLBI, HALCYON_VLBI_ON } from "@/lib/mission/halcyon";
 import { cn } from "@/lib/utils";
 
 function Check({ on, locked }: { on: boolean; locked?: boolean }) {
@@ -62,9 +62,9 @@ export function EquipmentScreen({
   const toggle = (id: string) => {
     const item = EQUIPMENT_BY_ID.get(id);
     if (!item || item.required) return;
-    halAudio.select();
-    if (id === "vlbi" && selected.has("vlbi")) onSpeak(HAL_NO_VLBI);
-    else if (id === "vlbi" && !selected.has("vlbi")) onSpeak(HAL_VLBI_ON);
+    halcyonAudio.select();
+    if (id === "vlbi" && selected.has("vlbi")) onSpeak(HALCYON_NO_VLBI);
+    else if (id === "vlbi" && !selected.has("vlbi")) onSpeak(HALCYON_VLBI_ON);
     onToggle(id);
   };
 
@@ -321,7 +321,7 @@ export function EquipmentScreen({
               disabled={over > 0}
               className="w-full"
               onClick={() => {
-                halAudio.confirm();
+                halcyonAudio.confirm();
                 onConfirm();
               }}
             >
@@ -329,7 +329,7 @@ export function EquipmentScreen({
             </HudButton>
             {over > 0 && (
               <p className="hal-mono text-center text-[10px] text-red-400/80">
-                HAL DECLINES — MANIFEST OVER MASS
+                HALCYON DECLINES — MANIFEST OVER MASS
               </p>
             )}
           </div>

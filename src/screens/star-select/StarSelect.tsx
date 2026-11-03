@@ -5,8 +5,8 @@ import type { FlareRisk, StarSystem } from "@/lib/mission/types";
 import { STARS, transitYears } from "@/lib/mission/stars";
 import { HudPanel, DataRow, HudButton } from "@/components/common/HudPanel";
 import { Starfield3D } from "./Starfield3D";
-import { halAudio } from "@/lib/mission/audio";
-import { halStarSelected } from "@/lib/mission/hal";
+import { halcyonAudio } from "@/lib/mission/audio";
+import { halcyonStarSelected } from "@/lib/mission/halcyon";
 import { cn } from "@/lib/utils";
 
 const FLARE_STYLE: Record<FlareRisk, string> = {
@@ -31,7 +31,7 @@ export function StarSelect({
   const pick = (id: string) => {
     setSelected(id);
     const s = STARS.find((x) => x.id === id);
-    if (s) onSpeak(halStarSelected(s));
+    if (s) onSpeak(halcyonStarSelected(s));
   };
 
   return (
@@ -51,7 +51,7 @@ export function StarSelect({
                 <button
                   key={s.id}
                   onClick={() => {
-                    halAudio.select();
+                    halcyonAudio.select();
                     pick(s.id);
                   }}
                   className={cn(
@@ -159,7 +159,7 @@ export function StarSelect({
                   {Math.round(transitYears(star))} YEARS
                 </div>
                 <div className="hal-mono mt-1 text-[10px] text-neutral-500">
-                  CREW IN COLD SLEEP · HAL 9000 ON WATCH
+                  CREW IN COLD SLEEP · HALCYON ON WATCH
                 </div>
               </div>
 
@@ -174,7 +174,7 @@ export function StarSelect({
               className="w-full"
               onClick={() => {
                 if (star) {
-                  halAudio.confirm();
+                  halcyonAudio.confirm();
                   onCommit(star.id);
                 }
               }}

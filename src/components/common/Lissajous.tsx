@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// ─── Lissajous monitor — the 9000's neural pattern on a scope ────────────────
+// ─── Lissajous monitor — HALCYON's neural pattern on a scope ──────────────────
 // x = sin(a·t + δ), y = sin(b·t). The phase δ drifts continuously, so the
 // figure quietly re-draws itself forever — a pure mathematical presence in
 // place of an eye. Phosphor trace, faint graticule.

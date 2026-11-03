@@ -5,8 +5,8 @@ import type { Planet, StarSystem } from "@/lib/mission/types";
 import { HudPanel, DataRow, HudButton, Gauge } from "@/components/common/HudPanel";
 import { OrbitMap } from "./OrbitMap";
 import { PlanetScan } from "@/components/common/PlanetScan";
-import { halAudio } from "@/lib/mission/audio";
-import { halPlanetSelected } from "@/lib/mission/hal";
+import { halcyonAudio } from "@/lib/mission/audio";
+import { halcyonPlanetSelected } from "@/lib/mission/halcyon";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<Planet["kind"], string> = {
@@ -56,8 +56,8 @@ export function PlanetSelect({
     setSelected(id);
     const p = planets.find((x) => x.id === id);
     if (p) {
-      halAudio.ping();
-      onSpeak(halPlanetSelected(p, !hasProbe));
+      halcyonAudio.ping();
+      onSpeak(halcyonPlanetSelected(p, !hasProbe));
     }
   };
 
@@ -284,7 +284,7 @@ export function PlanetSelect({
               className="w-full"
               onClick={() => {
                 if (planet) {
-                  halAudio.confirm();
+                  halcyonAudio.confirm();
                   onCommit(planet.id);
                 }
               }}
@@ -295,7 +295,7 @@ export function PlanetSelect({
             </HudButton>
             {planet && !planet.landable && (
               <p className="hal-mono mt-2 text-center text-[10px] text-red-400/80">
-                HAL DECLINES — LANDER REQUIRES A SURFACE
+                HALCYON DECLINES — LANDER REQUIRES A SURFACE
               </p>
             )}
           </div>

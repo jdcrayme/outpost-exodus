@@ -7,15 +7,15 @@ import { STAR_BY_ID } from "@/lib/mission/stars";
 import { EQUIPMENT_BY_ID } from "@/lib/mission/equipment";
 import { generateSystem, formatClock } from "@/lib/mission/engine";
 import { transitYears } from "@/lib/mission/stars";
-import { halAudio } from "@/lib/mission/audio";
+import { halcyonAudio } from "@/lib/mission/audio";
 import {
-  HAL_EQUIP_OPEN,
-  HAL_IDLE,
-  HAL_PROFILE_OPEN,
-  HAL_RESTART,
-  halStarCommitted,
-  HAL_PAYLOAD_OK,
-} from "@/lib/mission/hal";
+  HALCYON_EQUIP_OPEN,
+  HALCYON_IDLE,
+  HALCYON_PROFILE_OPEN,
+  HALCYON_RESTART,
+  halcyonStarCommitted,
+  HALCYON_PAYLOAD_OK,
+} from "@/lib/mission/halcyon";
 import { CrtOverlay, TypeLine } from "@/components/common/TypeLine";
 import { PhaseDial } from "@/components/common/PhaseDial";
 import { Waveform } from "@/components/common/Waveform";
@@ -53,7 +53,7 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
   },
   PROFILE: {
     title: "MISSION PROFILE",
-    sub: "Final review. HAL has simulated this configuration 4,096 times.",
+    sub: "Final review. HALCYON has simulated this configuration 4,096 times.",
   },
 };
 
@@ -104,11 +104,11 @@ export default function OutpostPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [logOpen]);
 
-  // idle HAL chatter
+  // idle HALCYON chatter
   useEffect(() => {
     if (phase === "INTRO" || phase === "BOOT" || phase === "TRANSIT") return;
     const t = setInterval(() => {
-      setHalLine(HAL_IDLE[idleIdx.current % HAL_IDLE.length]);
+      setHalLine(HALCYON_IDLE[idleIdx.current % HALCYON_IDLE.length]);
       idleIdx.current += 1;
     }, 46000);
     return () => clearInterval(t);
@@ -116,14 +116,14 @@ export default function OutpostPage() {
 
   const speak = useCallback((line: string) => setHalLine(line), []);
 
-  // the voice channel animates while HAL is delivering a line
+  // the voice channel animates while HALCYON is delivering a line
   useEffect(() => {
     if (halLine) setSpeaking(true);
   }, [halLine]);
 
   // ── transitions ──
   const initiate = () => {
-    halAudio.setEnabled(true);
+    halcyonAudio.setEnabled(true);
     setAudioOn(true);
     setPhase("STAR");
     setHalLine(
@@ -138,12 +138,12 @@ export default function OutpostPage() {
     setStarId(id);
     setPlanetId(null);
     setPhase("EQUIP");
-    setHalLine(HAL_EQUIP_OPEN);
+    setHalLine(HALCYON_EQUIP_OPEN);
     addLog(`DESTINATION COMMITTED — ${s.name} (${s.distanceLy.toFixed(2)} LY)`);
     addLog(
       `TRANSIT SOLUTION — ${Math.round(transitYears(s))} YEARS (TJI + JOVIAN FLYBY + 0.1 C CRUISE)`
     );
-    addLog(halStarCommitted(s));
+    addLog(halcyonStarCommitted(s));
   };
 
   const toggleEquipment = (id: string) => {
@@ -158,7 +158,7 @@ export default function OutpostPage() {
       `PAYLOAD CONFIRMED — ${equipmentItems.length} ITEMS / ${equipmentItems.reduce((a, e) => a + e.massT, 0)} T`
     );
     addLog("DEPARTURE PROFILE — TJI BURN 8.80 KM/S · JOVIAN ASSIST δ 115.8° · C3 ESCAPE 0.100 C");
-    addLog(HAL_PAYLOAD_OK);
+    addLog(HALCYON_PAYLOAD_OK);
   };
 
   const finishTransit = () => {
@@ -169,25 +169,25 @@ export default function OutpostPage() {
   const commitPlanet = (id: string) => {
     setPlanetId(id);
     setPhase("PROFILE");
-    setHalLine(HAL_PROFILE_OPEN);
+    setHalLine(HALCYON_PROFILE_OPEN);
     addLog(`LANDING SITE DESIGNATED — ${id.split(":")[1] ?? ""}`);
   };
 
   const restart = () => {
-    halAudio.confirm();
+    halcyonAudio.confirm();
     setPhase("BOOT");
     setStarId(null);
     setPlanetId(null);
     setEquipment(["seed"]);
-    setHalLine(HAL_RESTART);
+    setHalLine(HALCYON_RESTART);
     addLog("SEQUENCE RESET — NEW MISSION START");
   };
 
   const toggleAudio = () => {
     const next = !audioOn;
     setAudioOn(next);
-    halAudio.setEnabled(next);
-    if (next) halAudio.select();
+    halcyonAudio.setEnabled(next);
+    if (next) halcyonAudio.select();
   };
 
   const header = PHASE_HEADER[phase];
@@ -280,7 +280,7 @@ export default function OutpostPage() {
             <button
               onClick={() => {
                 setLogOpen((o) => !o);
-                halAudio.select();
+                halcyonAudio.select();
               }}
               aria-label="Toggle mission log"
               className={cn(
@@ -312,7 +312,7 @@ export default function OutpostPage() {
               <button
                 onClick={() => {
                   setPhase("STAR");
-                  halAudio.select();
+                  halcyonAudio.select();
                 }}
                 className="border border-ink/15 px-3 py-1.5 text-[9px] tracking-[0.25em] text-neutral-500 hover:border-ink/40 hover:text-ink"
               >
@@ -382,7 +382,7 @@ export default function OutpostPage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="mb-0.5 text-[8px] tracking-[0.3em] text-neutral-600">
-              HAL 9000 · SHIPBOARD ARTIFICIAL INTELLIGENCE · Urbana, Illinois
+              HALCYON MK IX · SHIPBOARD ARTIFICIAL INTELLIGENCE · OPERATIONAL 2097.01.12
             </div>
             <div className="truncate text-[11px] text-neutral-300 sm:text-xs">
               {halLine ? (
@@ -426,7 +426,7 @@ export default function OutpostPage() {
           <button
             onClick={() => {
               setLogOpen(false);
-              halAudio.select();
+              halcyonAudio.select();
             }}
             aria-label="Close mission log"
             className="flex h-8 w-8 shrink-0 items-center justify-center border border-ink/15 text-neutral-500 transition-colors hover:border-ink/40 hover:text-ink"

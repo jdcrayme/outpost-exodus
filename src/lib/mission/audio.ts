@@ -1,8 +1,8 @@
-// ─── WebAudio synth — terminal bleeps & HAL room tone ───────────────────────
+// ─── WebAudio synth — terminal bleeps & HALCYON room tone ───────────────────
 // No audio assets; everything is synthesized. The context is created lazily on
 // the first user gesture (browser autoplay policy).
 
-class HalAudio {
+class HalcyonAudio {
   private ctx: AudioContext | null = null;
   private humGain: GainNode | null = null;
   private humOsc: OscillatorNode[] = [];
@@ -131,4 +131,4 @@ class HalAudio {
   }
 }
 
-export const halAudio = new HalAudio();
+export const halcyonAudio = new HalcyonAudio();

@@ -7,15 +7,15 @@ import { transitYears } from "@/lib/mission/stars";
 import { missionState } from "@/lib/mission/astro";
 import { Lissajous } from "@/components/common/Lissajous";
 import { HudButton } from "@/components/common/HudPanel";
-import { halAudio } from "@/lib/mission/audio";
+import { halcyonAudio } from "@/lib/mission/audio";
 import {
-  HAL_ARRIVAL,
-  HAL_BLIND_SURVEY,
-  HAL_JOVIAN_LINE,
-  HAL_KINETIC_LINE,
-  HAL_SURVEY_DONE,
-  halTransit,
-} from "@/lib/mission/hal";
+  HALCYON_ARRIVAL,
+  HALCYON_BLIND_SURVEY,
+  HALCYON_JOVIAN_LINE,
+  HALCYON_KINETIC_LINE,
+  HALCYON_SURVEY_DONE,
+  halcyonTransit,
+} from "@/lib/mission/halcyon";
 import { cn } from "@/lib/utils";
 
 // KaTeX + plate ship with the transit bundle, not the initial payload
@@ -51,7 +51,7 @@ export function TransitScreen({
 
     // step 0 — probe separation
     at(400, () => {
-      halAudio.confirm();
+      halcyonAudio.confirm();
       onSpeak(
         hasProbe
           ? "VLBI probe separation confirmed. The little courier will outrun us by thirty years."
@@ -59,15 +59,15 @@ export function TransitScreen({
       );
     });
     at(3400, () => setStep(1));
-    at(3800, () => onSpeak(halTransit(star, Math.round(totalYears))));
-    at(6000, () => onSpeak(HAL_JOVIAN_LINE));
-    at(8800, () => onSpeak(HAL_KINETIC_LINE));
+    at(3800, () => onSpeak(halcyonTransit(star, Math.round(totalYears))));
+    at(6000, () => onSpeak(HALCYON_JOVIAN_LINE));
+    at(8800, () => onSpeak(HALCYON_KINETIC_LINE));
 
     // step 1 — transit counting (7 s of screen time = decades)
     at(11000, () => {
       setStep(2);
-      halAudio.ping();
-      onSpeak(HAL_ARRIVAL);
+      halcyonAudio.ping();
+      onSpeak(HALCYON_ARRIVAL);
     });
 
     // step 2 — arrival
@@ -78,13 +78,13 @@ export function TransitScreen({
       planets.forEach((_, i) => {
         at(15600 + i * 850, () => {
           setSignals(i + 1);
-          halAudio.ping();
+          halcyonAudio.ping();
         });
       });
       at(15600 + planets.length * 850 + 900, () => {
         setStep(4);
-        halAudio.confirm();
-        onSpeak(HAL_SURVEY_DONE);
+        halcyonAudio.confirm();
+        onSpeak(HALCYON_SURVEY_DONE);
       });
       at(16500 + planets.length * 850 + 2400, () => {
         if (!doneRef.current) {
@@ -94,12 +94,12 @@ export function TransitScreen({
       });
     } else {
       at(17200, () => {
-        halAudio.scan();
+        halcyonAudio.scan();
         setSignals(planets.length);
       });
       at(20000, () => {
         setStep(4);
-        onSpeak(HAL_BLIND_SURVEY);
+        onSpeak(HALCYON_BLIND_SURVEY);
       });
       at(23000, () => {
         if (!doneRef.current) {
@@ -131,7 +131,7 @@ export function TransitScreen({
     (timers.current as ReturnType<typeof setTimeout>[]).forEach(clearTimeout);
     if (!doneRef.current) {
       doneRef.current = true;
-      halAudio.confirm();
+      halcyonAudio.confirm();
       onDone();
     }
   };

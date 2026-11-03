@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { halAudio } from "@/lib/mission/audio";
+import { halcyonAudio } from "@/lib/mission/audio";
 
 // ─── Typewriter line — prints text progressively, optional tick per char ────
 
@@ -40,7 +40,7 @@ export function TypeLine({
       interval = setInterval(() => {
         i += 1;
         setShown(i);
-        if (tick && i % 3 === 0) halAudio.tick();
+        if (tick && i % 3 === 0) halcyonAudio.tick();
         if (i >= text.length) {
           if (interval) clearInterval(interval);
           onDone?.();

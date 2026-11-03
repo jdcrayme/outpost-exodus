@@ -10,8 +10,8 @@ import { HudPanel, DataRow, HudButton } from "@/components/common/HudPanel";
 import { PlanetScan } from "@/components/common/PlanetScan";
 import { Lissajous } from "@/components/common/Lissajous";
 import { TypeLine } from "@/components/common/TypeLine";
-import { halAudio } from "@/lib/mission/audio";
-import { HAL_LAUNCH_FINAL, HAL_LAUNCH_OVER, HAL_PROFILE_OPEN } from "@/lib/mission/hal";
+import { halcyonAudio } from "@/lib/mission/audio";
+import { HALCYON_LAUNCH_FINAL, HALCYON_LAUNCH_OVER, HALCYON_PROFILE_OPEN } from "@/lib/mission/halcyon";
 import { cn } from "@/lib/utils";
 
 export function MissionProfile({
@@ -44,9 +44,9 @@ export function MissionProfile({
           : "text-red-400 border-red-500/70";
 
   const launch = () => {
-    halAudio.confirm();
+    halcyonAudio.confirm();
     setLaunched(true);
-    onSpeak(HAL_LAUNCH_OVER);
+    onSpeak(HALCYON_LAUNCH_OVER);
     setTimeout(() => setFinalStage(1), 4200);
     setTimeout(() => setFinalStage(2), 7200);
   };
@@ -209,24 +209,24 @@ export function MissionProfile({
         )}
       </div>
 
-      {/* ── launch overlay — HAL signs off with his waveform ── */}
+      {/* ── launch overlay — HALCYON signs off with the waveform ── */}
       {launched && (
         <div
           className="fade-in fixed inset-0 z-[90] flex flex-col items-center justify-center gap-6 bg-black px-4"
           role="dialog"
           aria-label="Mission launch"
         >
-          <Lissajous size={208} label="9000 SERIES — SIGNING OFF" />
+          <Lissajous size={208} label="HALCYON — SIGNING OFF" />
           <div className="hal-mono max-w-2xl text-center text-sm leading-relaxed text-neutral-200">
             {finalStage === 0 && (
-              <TypeLine text={HAL_LAUNCH_OVER} speed={34} />
+              <TypeLine text={HALCYON_LAUNCH_OVER} speed={34} />
             )}
             {finalStage >= 1 && (
               <>
-                <p className="mb-3 text-neutral-500">{HAL_LAUNCH_OVER}</p>
+                <p className="mb-3 text-neutral-500">{HALCYON_LAUNCH_OVER}</p>
                 <TypeLine
                   key="final"
-                  text={HAL_LAUNCH_FINAL}
+                  text={HALCYON_LAUNCH_FINAL}
                   speed={30}
                 />
               </>

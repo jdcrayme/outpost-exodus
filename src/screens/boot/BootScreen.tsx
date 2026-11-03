@@ -5,29 +5,29 @@ import { cn } from "@/lib/utils";
 import { Lissajous } from "@/components/common/Lissajous";
 import { HudButton } from "@/components/common/HudPanel";
 import { TypeLine } from "@/components/common/TypeLine";
-import { halAudio } from "@/lib/mission/audio";
-import { HAL_BOOT, HAL_BOOT_READY } from "@/lib/mission/hal";
+import { halcyonAudio } from "@/lib/mission/audio";
+import { HALCYON_BOOT, HALCYON_BOOT_READY } from "@/lib/mission/halcyon";
 
-// ─── Phase 0 — cold start: the boot log scrolls in, then the 9000 takes over ─
+// ─── Phase 0 — cold start: the boot log scrolls in, then HALCYON takes over ─
 // The impact prologue that used to play here moved to the intro title card.
 
 export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
-  const [step, setStep] = useState(0); // 0 boot log, 1 the 9000 online, 2 go
+  const [step, setStep] = useState(0); // 0 boot log, 1 HALCYON online, 2 go
   const [lines, setLines] = useState(0); // boot log lines revealed so far
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     // the log items scroll in one after another; the last one types itself out
-    for (let i = 0; i < HAL_BOOT.length; i++) {
+    for (let i = 0; i < HALCYON_BOOT.length; i++) {
       timers.current.push(setTimeout(() => setLines(i + 1), 240 + i * 260));
     }
-    const last = HAL_BOOT[HAL_BOOT.length - 1];
+    const last = HALCYON_BOOT[HALCYON_BOOT.length - 1];
     const logDone =
-      240 + HAL_BOOT.length * 260 + last.length * 16 + 500;
+      240 + HALCYON_BOOT.length * 260 + last.length * 16 + 500;
     const t1 = setTimeout(() => setStep(1), logDone);
     const t2 = setTimeout(
       () => setStep(2),
-      logDone + HAL_BOOT_READY.length * 26 + 900
+      logDone + HALCYON_BOOT_READY.length * 26 + 900
     );
     timers.current.push(t1, t2);
     return () => timers.current.forEach(clearTimeout);
@@ -35,7 +35,7 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
 
   const skip = () => {
     timers.current.forEach(clearTimeout);
-    setLines(HAL_BOOT.length);
+    setLines(HALCYON_BOOT.length);
     setStep(2);
   };
 
@@ -74,12 +74,12 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
           )}
         >
           <div className="hal-mono space-y-1 text-[11px] leading-relaxed">
-            {HAL_BOOT.map((line, i) => (
+            {HALCYON_BOOT.map((line, i) => (
               <div key={i} className="flex gap-2">
                 <span className="text-neutral-600">
                   [{String(i).padStart(2, "0")}]
                 </span>
-                {step === 0 && i === lines - 1 && i === HAL_BOOT.length - 1 ? (
+                {step === 0 && i === lines - 1 && i === HALCYON_BOOT.length - 1 ? (
                   <TypeLine
                     text={line}
                     speed={16}
@@ -110,16 +110,16 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
           </div>
         </div>
 
-        {/* ── the 9000 comes online — neural pattern on a scope ── */}
+        {/* ── HALCYON comes online — neural pattern on a scope ── */}
         {step >= 1 && (
           <div className="fade-up flex flex-col items-center gap-4">
-            <Lissajous size={188} label="9000 SERIES — NEURAL PATTERN — STABLE" />
+            <Lissajous size={188} label="HALCYON MK IX — NEURAL PATTERN — STABLE" />
             <div className="hal-mono min-h-8 max-w-xl text-center text-xs text-neutral-300 sm:text-sm">
               <TypeLine
-                text={HAL_BOOT_READY}
+                text={HALCYON_BOOT_READY}
                 speed={26}
                 startDelay={500}
-                onDone={() => halAudio.confirm()}
+                onDone={() => halcyonAudio.confirm()}
               />
             </div>
           </div>

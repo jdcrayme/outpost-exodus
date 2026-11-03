@@ -36,7 +36,7 @@ export const PROP_T = 96_000; // fusion stockpile + departure stages
 export const CREW_COUNT = 207;
 
 /** The 2098 impactor (story canon): 1.4 km nickel-iron body at ~20 km/s. */
-export const IMPACTOR_2098_J = 2.2e21; // J — for HAL's grim comparisons
+export const IMPACTOR_2098_J = 2.2e21; // J — for HALCYON's grim comparisons
 
 // ── TJI transfer ellipse: Earth (perihelion) → Jupiter (aphelion) ────────────
 

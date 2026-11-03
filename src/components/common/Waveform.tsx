@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// ─── Oscilloscope trace — the 9000's voice channel on the comm panel ─────────
+// ─── Oscilloscope trace — HALCYON's voice channel on the comm panel ──────────
 // Idle: a quiet carrier line with a noise floor. Active: a speech-like
 // composite waveform, phosphor green on a faint grid. Drawn on canvas with
 // a drifting bank of harmonics so it never loops visibly.
@@ -98,7 +98,7 @@ export function Waveform({
       style={{ width, height }}
       className={className}
       role="img"
-      aria-label={active ? "HAL speaking — voice waveform active" : "HAL voice channel idle"}
+      aria-label={active ? "HALCYON speaking — voice waveform active" : "HALCYON voice channel idle"}
     />
   );
 }
