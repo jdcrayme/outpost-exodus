@@ -7,28 +7,38 @@ import { IntroLogo } from "./IntroLogo";
 
 // ─── Phase −1 — title card: the impact prologue, then the logo ────────────────
 //
-// The narration moved here from the boot screen (it was BOOT_PRELUDE) so the
-// story is told once, cinematically, before the cold start. All pacing hangs
-// off the three constants below — tune to taste.
+// Six beats on the starfield, each stamped with an era marker. The impact
+// beat drops the field to near-black and holds longer — the sky goes out for
+// a moment, then the survivors' beats play over the returning stars. The beat
+// that names HALCYON sets up every line the AI speaks for the rest of the game.
 
-const PROLOGUE: { year: string | null; text: string }[] = [
+const PROLOGUE: { chip: string; text: string; hold?: number; veil?: boolean }[] = [
   {
-    year: "2096",
+    chip: "2096 · DETECTION",
     text: "Survey station Galileo detects a 1.4 km nickel-iron body on an Earth-crossing trajectory.",
   },
-  { year: "2098", text: "Impact. The Pacific basin ignites. The gardens are gone." },
-  { year: null, text: "One ship survived the construction collapse." },
   {
-    year: null,
+    chip: "2098 · IMPACT",
+    text: "Impact. The Pacific basin ignites. The gardens are gone.",
+    hold: 4200,
+    veil: true,
+  },
+  { chip: "THE COLLAPSE", text: "One ship survived the construction collapse." },
+  {
+    chip: "THE SHIP",
     text: "OUTPOST-class seed ship EXODUS — 207 sleepers, one machine mind, one chance.",
   },
   {
-    year: null,
+    chip: "THE MIND",
+    text: "The machine mind has a name: HALCYON. It keeps the watch. It has never slept.",
+  },
+  {
+    chip: "THE MISSION",
     text: "Destination: a nearby star. Payload: whatever fits. After that — a world, chosen from the dark.",
   },
 ];
 
-const BEAT_MS = 2900; // per prologue line: fade in, hold, fade out
+const BEAT_MS = 2700; // default per-beat hold: fade in, hold, fade out (beats may override)
 const LOGO_HOLD_MS = 3400; // the title card rests before handing off to boot
 const OUT_MS = 500; // crossfade into the boot screen
 
@@ -37,21 +47,27 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
   const [visible, setVisible] = useState(false);
   const [logo, setLogo] = useState(false);
   const [out, setOut] = useState(false);
+  const [veil, setVeil] = useState(false); // the impact beat kills the starfield
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const beatMs = reduced ? 1500 : BEAT_MS;
     const T = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
 
-    PROLOGUE.forEach((_, i) => {
-      const t0 = i * beatMs + 60;
-      T(() => setBeat(i), t0);
-      T(() => setVisible(true), t0 + 40);
-      T(() => setVisible(false), t0 + beatMs - 520);
+    let t = 80;
+    PROLOGUE.forEach((b, i) => {
+      const hold = reduced ? 1500 : (b.hold ?? BEAT_MS);
+      T(() => {
+        setBeat(i);
+        if (b.veil) setVeil(true);
+      }, t);
+      T(() => setVisible(true), t + 40);
+      T(() => setVisible(false), t + hold - 520);
+      if (b.veil) T(() => setVeil(false), t + hold);
+      t += hold;
     });
 
-    const tLogo = PROLOGUE.length * beatMs + 250;
+    const tLogo = t + 250;
     T(() => setLogo(true), tLogo);
     T(() => setOut(true), tLogo + LOGO_HOLD_MS);
     T(onDone, tLogo + LOGO_HOLD_MS + OUT_MS);
@@ -85,18 +101,27 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
     >
       <IntroStarfield className="absolute inset-0 h-full w-full" />
 
+      {/* the impact beat — the sky goes out; the survivors get it back */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-0 bg-[#040406] transition-opacity duration-[900ms]",
+          veil ? "opacity-95" : "opacity-0"
+        )}
+      />
+
       {/* prologue — one line at a time, centre screen */}
       {!logo && (
         <div className="absolute inset-x-0 top-[38%] flex -translate-y-1/2 justify-center px-6">
           <div className="w-full max-w-2xl text-center">
             <div
-              key={`y-${beat}`}
+              key={`c-${beat}`}
               className={cn(
                 "hal-display mb-4 min-h-[1em] text-[11px] tracking-[0.6em] text-amber-300/90 transition-opacity duration-500",
-                visible && PROLOGUE[beat].year ? "opacity-100" : "opacity-0"
+                visible ? "opacity-100" : "opacity-0"
               )}
             >
-              {PROLOGUE[beat].year ?? "\u00A0"}
+              {PROLOGUE[beat].chip}
             </div>
             <p
               key={beat}
