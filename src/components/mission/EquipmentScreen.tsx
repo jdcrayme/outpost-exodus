@@ -20,13 +20,13 @@ function Check({ on, locked }: { on: boolean; locked?: boolean }) {
       className={cn(
         "hal-mono flex h-4 w-4 shrink-0 items-center justify-center border text-[11px] leading-none",
         on
-          ? "border-red-500 bg-red-500/20 text-red-300"
-          : "border-white/25 text-transparent",
+          ? "border-ink bg-ink/15 text-ink"
+          : "border-ink/25 text-transparent",
         locked && "border-amber-400/70 bg-amber-400/10 text-amber-300"
       )}
       aria-hidden="true"
     >
-      {on || locked ? "✕" : ""}
+      {on || locked ? "✓" : ""}
     </span>
   );
 }
@@ -69,7 +69,7 @@ export function EquipmentScreen({
     <div className="grid gap-3 lg:grid-cols-[1fr_330px]">
       {/* ── manifest items ── */}
       <div className="space-y-3">
-        <div className="hal-mono flex flex-wrap items-center justify-between gap-2 border border-white/10 bg-black/40 px-3 py-2 text-[10px] tracking-widest text-neutral-500">
+        <div className="hal-mono flex flex-wrap items-center justify-between gap-2 border border-ink/10 bg-black/40 px-3 py-2 text-[10px] tracking-widest text-neutral-500">
           <span>
             SEED SHIP EXODUS · PAYLOAD BAY · LAUNCH CAPACITY{" "}
             <span className="text-amber-300">
@@ -99,10 +99,10 @@ export function EquipmentScreen({
                   aria-pressed={on}
                   aria-label={`${e.name}, ${e.massT} tonnes${e.required ? ", mandatory" : ""}`}
                   className={cn(
-                    "block w-full border-b border-white/5 px-3 py-2.5 text-left transition-colors",
+                    "block w-full border-b border-ink/5 px-3 py-2.5 text-left transition-colors",
                     e.required
                       ? "cursor-default bg-amber-400/5"
-                      : "hover:bg-white/5",
+                      : "hover:bg-ink/5",
                     on && !e.required && "hud-row-selected"
                   )}
                 >
@@ -125,7 +125,7 @@ export function EquipmentScreen({
                             className={cn(
                               "text-sm",
                               on || e.required
-                                ? "text-red-300"
+                                ? "text-phos"
                                 : "text-neutral-500"
                             )}
                           >
@@ -166,7 +166,7 @@ export function EquipmentScreen({
         <HudPanel
           title="Launch Manifest"
           code="LDG-01"
-          accent={over > 0 ? "red" : "amber"}
+          accent={over > 0 ? "red" : "phos"}
           bodyClassName="p-0"
           className="lg:mb-0"
         >
@@ -180,19 +180,26 @@ export function EquipmentScreen({
                 <span
                   className={cn(
                     "hal-mono text-xs",
-                    over > 0 ? "text-red-400 glow-red" : "text-neutral-200"
+                    over > 0 ? "text-red-400" : "text-phos"
                   )}
                 >
                   {mass.toLocaleString()} / {CARGO_CAPACITY_T.toLocaleString()} T
                 </span>
               </div>
-              <div className="relative h-3 border border-white/15 bg-white/5">
+              <div className="relative h-3 border border-ink/15 bg-ink/5">
+                {/* capacity graduation — one tick per 10% */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(232,230,220,0.3) calc(10% - 1px) 10%)",
+                  }}
+                  aria-hidden="true"
+                />
                 <div
                   className={cn(
                     "absolute inset-y-0 left-0 transition-all duration-500",
-                    over > 0
-                      ? "bg-red-600/80"
-                      : "bg-gradient-to-r from-amber-500/70 to-amber-300/80"
+                    over > 0 ? "bg-red-600/80" : "bg-ink/80"
                   )}
                   style={{
                     width: `${Math.min(100, (mass / CARGO_CAPACITY_T) * 100)}%`,
@@ -267,7 +274,7 @@ export function EquipmentScreen({
                     className={cn(
                       "flex h-3.5 w-3.5 items-center justify-center border text-[9px]",
                       c.ok
-                        ? "border-emerald-500/70 text-emerald-300"
+                        ? "border-phos/70 text-phos"
                         : c.warn
                           ? "border-amber-400/70 text-amber-300"
                           : "border-red-500/70 text-red-400"
@@ -287,7 +294,7 @@ export function EquipmentScreen({
             </div>
           </div>
 
-          <div className="space-y-2 border-t border-white/10 p-3">
+          <div className="space-y-2 border-t border-ink/10 p-3">
             <HudButton
               disabled={over > 0}
               className="w-full"

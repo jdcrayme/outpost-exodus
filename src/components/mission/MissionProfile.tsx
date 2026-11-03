@@ -8,7 +8,7 @@ import { transitYears } from "@/lib/mission/stars";
 import { computePrognosis } from "@/lib/mission/engine";
 import { HudPanel, DataRow, HudButton } from "./HudPanel";
 import { PlanetScan } from "./PlanetScan";
-import { HalEye } from "./HalEye";
+import { Lissajous } from "./Lissajous";
 import { TypeLine } from "./TypeLine";
 import { halAudio } from "@/lib/mission/audio";
 import { HAL_LAUNCH_FINAL, HAL_LAUNCH_OVER, HAL_PROFILE_OPEN } from "@/lib/mission/hal";
@@ -36,12 +36,12 @@ export function MissionProfile({
 
   const gradeColor =
     prognosis.score >= 78
-      ? "text-emerald-300 border-emerald-500/60"
+      ? "text-phos border-phos/60"
       : prognosis.score >= 62
         ? "text-amber-200 border-amber-400/60"
         : prognosis.score >= 47
           ? "text-amber-300 border-amber-400/70"
-          : "text-red-400 border-red-500/70 glow-red";
+          : "text-red-400 border-red-500/70";
 
   const launch = () => {
     halAudio.confirm();
@@ -55,13 +55,13 @@ export function MissionProfile({
     <div className="grid gap-3 lg:grid-cols-[1fr_360px]">
       {/* ── left: mission summary ── */}
       <div className="space-y-3">
-        <HudPanel title="Mission Profile" code="FINAL.01" accent="amber" bodyClassName="p-0">
+        <HudPanel title="Mission Profile" code="FINAL.01" accent="white" bodyClassName="p-0">
           <div className="grid gap-0 sm:grid-cols-2">
-            <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
+            <div className="border-b border-ink/10 p-4 sm:border-b-0 sm:border-r">
               <div className="hal-mono mb-2 text-[10px] tracking-widest text-neutral-500">
                 DESTINATION
               </div>
-              <div className="hal-display text-base tracking-[0.2em] text-neutral-100">
+              <div className="hal-display text-base tracking-[0.2em] text-ink">
                 {star.name}
               </div>
               <div className="hal-mono mt-2 space-y-1 text-[11px] text-neutral-400">
@@ -76,7 +76,7 @@ export function MissionProfile({
               </div>
               {planet ? (
                 <>
-                  <div className="hal-display text-base tracking-[0.2em] text-neutral-100">
+                  <div className="hal-display text-base tracking-[0.2em] text-ink">
                     {planet.designation}
                   </div>
                   <div className="hal-mono mt-2 space-y-1 text-[11px] text-neutral-400">
@@ -91,14 +91,14 @@ export function MissionProfile({
                         {planet.atmosphere.composition.split("·")[0].trim()}
                       </div>
                     ) : (
-                      <div className="text-red-400/80">
+                      <div className="text-amber-300/80">
                         SURFACE CONDITIONS UNKNOWN — BLIND LANDING
                       </div>
                     )}
                   </div>
                 </>
               ) : (
-                <div className="hal-mono text-xs text-red-400">—</div>
+                <div className="hal-mono text-xs text-neutral-500">—</div>
               )}
             </div>
           </div>
@@ -109,18 +109,18 @@ export function MissionProfile({
             {equipment.map((e) => (
               <div
                 key={e.id}
-                className="hal-mono flex items-baseline justify-between gap-3 border-b border-white/5 px-3 py-1.5 text-[11px]"
+                className="hal-mono flex items-baseline justify-between gap-3 border-b border-ink/5 px-3 py-1.5 text-[11px]"
               >
                 <span className="text-neutral-300">
-                  <span className="text-red-400/80">✕</span> {e.name}
+                  <span className="text-neutral-500">■</span> {e.name}
                 </span>
                 <span className="shrink-0 text-neutral-500">
-                  <span className="text-red-300">{e.massT}</span> T
+                  <span className="text-phos">{e.massT}</span> T
                 </span>
               </div>
             ))}
           </div>
-          <div className="hal-mono flex justify-between border-t border-white/10 px-3 py-2 text-[11px]">
+          <div className="hal-mono flex justify-between border-t border-ink/10 px-3 py-2 text-[11px]">
             <span className="text-neutral-500">TOTAL MASS</span>
             <span className="text-neutral-200">
               {mass.toLocaleString()} / {CARGO_CAPACITY_T.toLocaleString()} T
@@ -134,13 +134,13 @@ export function MissionProfile({
         <HudPanel
           title="Colony Prognosis"
           code="SIM.4096"
-          accent={prognosis.score >= 47 ? "amber" : "red"}
+          accent={prognosis.score >= 62 ? "phos" : prognosis.score >= 47 ? "amber" : "red"}
           bodyClassName="p-0"
         >
           <div className="p-4">
             <div className="mb-4 flex items-end justify-between">
               <div>
-                <div className="hal-display text-4xl leading-none text-neutral-100">
+                <div className="hal-display glow-ink text-4xl leading-none text-ink">
                   {prognosis.score}
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
@@ -167,12 +167,12 @@ export function MissionProfile({
                       {f.value.toFixed(1)} / {f.max}
                     </span>
                   </div>
-                  <div className="h-1 w-full border border-white/10 bg-white/5">
+                  <div className="h-1 w-full border border-ink/10 bg-ink/5">
                     <div
                       className={cn(
                         "h-full",
                         f.value / f.max > 0.5
-                          ? "bg-emerald-400/70"
+                          ? "bg-phos/70"
                           : f.value > 0
                             ? "bg-amber-400/70"
                             : "bg-red-500/70"
@@ -186,11 +186,11 @@ export function MissionProfile({
               ))}
             </div>
 
-            <p className="hal-mono mt-4 border-l-2 border-amber-400/50 pl-3 text-[10px] leading-relaxed text-neutral-400">
+            <p className="hal-mono mt-4 border-l-2 border-ink/30 pl-3 text-[10px] leading-relaxed text-neutral-400">
               {prognosis.verdict}
             </p>
           </div>
-          <div className="space-y-2 border-t border-white/10 p-3">
+          <div className="space-y-2 border-t border-ink/10 p-3">
             <HudButton className="w-full" onClick={launch}>
               ▸ OUTPOST — MISSION START
             </HudButton>
@@ -209,14 +209,14 @@ export function MissionProfile({
         )}
       </div>
 
-      {/* ── launch overlay ── */}
+      {/* ── launch overlay — HAL signs off with his waveform ── */}
       {launched && (
         <div
           className="fade-in fixed inset-0 z-[90] flex flex-col items-center justify-center gap-6 bg-black px-4"
           role="dialog"
           aria-label="Mission launch"
         >
-          <HalEye size={200} />
+          <Lissajous size={208} label="9000 SERIES — SIGNING OFF" />
           <div className="hal-mono max-w-2xl text-center text-sm leading-relaxed text-neutral-200">
             {finalStage === 0 && (
               <TypeLine text={HAL_LAUNCH_OVER} speed={34} />
@@ -234,7 +234,7 @@ export function MissionProfile({
           </div>
           {finalStage >= 2 && (
             <div className="fade-up flex flex-col items-center gap-3">
-              <div className="hal-display text-lg tracking-[0.35em] text-red-400 glow-red">
+              <div className="hal-display glow-phos text-lg tracking-[0.35em] text-phos">
                 GOOD LUCK, COMMANDER
               </div>
               <HudButton variant="ghost" onClick={onRestart}>

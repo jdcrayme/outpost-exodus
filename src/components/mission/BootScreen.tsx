@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HalEye } from "./HalEye";
+import { Lissajous } from "./Lissajous";
 import { HudButton } from "./HudPanel";
 import { TypeLine } from "./TypeLine";
 import { halAudio } from "@/lib/mission/audio";
 import { BOOT_PRELUDE, HAL_BOOT, HAL_BOOT_READY } from "@/lib/mission/hal";
 
-// ─── Phase 0 — HAL awakening, boot log, mission prelude ─────────────────────
+// ─── Phase 0 — cold start: diagnostics, the 9000 comes online, prelude ────────
 
 export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
   const [step, setStep] = useState(0); // 0 log, 1 eye+ready, 2 prelude, 3 go
@@ -30,7 +30,7 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
     <div className="relative flex min-h-[calc(100vh-8.5rem)] items-center justify-center px-4 py-8">
       <button
         onClick={skip}
-        className="hal-mono absolute right-4 top-0 border border-white/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-white/50 hover:text-neutral-200"
+        className="hal-mono absolute right-4 top-0 border border-ink/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-ink/50 hover:text-ink"
         aria-label="Skip boot sequence"
       >
         SKIP ▸
@@ -39,10 +39,10 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
       <div className="w-full max-w-3xl space-y-6">
         {/* ── title block ── */}
         <div className="fade-in text-center">
-          <div className="hal-mono mb-2 text-[10px] tracking-[0.5em] text-red-500/80">
+          <div className="hal-mono mb-2 text-[10px] tracking-[0.5em] text-phos/70">
             SIERRA OUTPOST · 1994 · RECREATION
           </div>
-          <h1 className="hal-display glow-red text-4xl font-normal tracking-[0.32em] text-neutral-100 sm:text-6xl">
+          <h1 className="hal-display glow-ink text-4xl font-normal tracking-[0.32em] text-ink sm:text-6xl">
             OUTPOST
           </h1>
           <div className="hal-mono mt-3 text-[10px] tracking-[0.4em] text-neutral-500 sm:text-xs">
@@ -52,12 +52,12 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
         </div>
 
         {/* ── boot log ── */}
-        <div className="border border-white/10 bg-black/50 p-4">
+        <div className="border border-ink/10 bg-black/50 p-4">
           <div className="hal-mono space-y-1 text-[11px] leading-relaxed">
             {HAL_BOOT.slice(0, step === 0 ? undefined : HAL_BOOT.length).map(
               (line, i) => (
                 <div key={i} className="flex gap-2">
-                  <span className="text-red-500/70">
+                  <span className="text-neutral-600">
                     [{String(i).padStart(2, "0")}]
                   </span>
                   {step === 0 && i === HAL_BOOT.length - 1 ? (
@@ -76,8 +76,8 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
             )}
             {step >= 1 && (
               <div className="flex gap-2">
-                <span className="text-emerald-400/80">[OK]</span>
-                <span className="text-emerald-300">
+                <span className="text-phos/80">[OK]</span>
+                <span className="text-phos">
                   ALL SUBSYSTEMS — GO FOR SEQUENCE
                 </span>
               </div>
@@ -85,10 +85,10 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
           </div>
         </div>
 
-        {/* ── HAL eye ── */}
+        {/* ── the 9000 comes online — neural pattern on a scope ── */}
         {step >= 1 && (
           <div className="fade-up flex flex-col items-center gap-4">
-            <HalEye size={148} />
+            <Lissajous size={188} label="9000 SERIES — NEURAL PATTERN — STABLE" />
             <div className="hal-mono min-h-8 max-w-xl text-center text-xs text-neutral-300 sm:text-sm">
               <TypeLine
                 text={HAL_BOOT_READY}
@@ -102,7 +102,7 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
 
         {/* ── prelude ── */}
         {step >= 2 && (
-          <div className="fade-up border-l-2 border-red-500/50 pl-4">
+          <div className="fade-up border-l-2 border-ink/25 pl-4">
             <div className="hal-mono space-y-2 text-[11px] leading-relaxed text-neutral-400 sm:text-xs">
               {BOOT_PRELUDE.slice(0, step === 2 ? undefined : undefined).map(
                 (line, i) =>

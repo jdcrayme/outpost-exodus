@@ -65,7 +65,7 @@ export function TypeLine({
       )}
       {done && cursor && (
         <span
-          className="ml-1 inline-block h-[1em] w-[0.55em] translate-y-[0.15em] bg-red-500/80"
+          className="ml-1 inline-block h-[1em] w-[0.55em] translate-y-[0.15em] bg-phos/80"
           aria-hidden="true"
         />
       )}

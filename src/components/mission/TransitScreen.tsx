@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import type { Planet, StarSystem } from "@/lib/mission/types";
 import { transitYears } from "@/lib/mission/stars";
 import { missionState } from "@/lib/mission/astro";
-import { HalEye } from "./HalEye";
+import { Lissajous } from "./Lissajous";
 import { HudButton } from "./HudPanel";
 import { halAudio } from "@/lib/mission/audio";
 import {
@@ -143,7 +143,7 @@ export function TransitScreen({
     <div className="relative mx-auto flex min-h-[calc(100vh-8.5rem)] max-w-5xl flex-col items-center justify-center px-4 py-8">
       <button
         onClick={skip}
-        className="hal-mono absolute right-4 top-0 border border-white/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-white/50 hover:text-neutral-200"
+        className="hal-mono absolute right-4 top-0 border border-ink/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-ink/50 hover:text-ink"
         aria-label="Skip transit"
       >
         SKIP ▸
@@ -153,8 +153,13 @@ export function TransitScreen({
         {/* ── separation ── */}
         {step === 0 && (
           <div className="fade-up flex flex-col items-center gap-6 text-center">
-            <HalEye size={120} />
-            <div className="hal-display text-xl tracking-[0.3em] text-neutral-100 sm:text-2xl">
+            <Lissajous
+              size={148}
+              a={2}
+              b={3}
+              label={hasProbe ? "COURIER TELEMETRY — LINK NOMINAL" : "TELEMETRY — LINK LIMITED"}
+            />
+            <div className="hal-display text-xl tracking-[0.3em] text-ink sm:text-2xl">
               {hasProbe ? "VLBI PROBE SEPARATION" : "FINAL MANIFEST REVIEW"}
             </div>
             <div className="hal-mono text-xs text-neutral-400">
@@ -169,17 +174,17 @@ export function TransitScreen({
         {step >= 1 && step < 3 && (
           <div className="fade-up space-y-4 sm:space-y-5">
             <div className="text-center">
-              <div className="hal-display text-lg tracking-[0.3em] text-neutral-100 sm:text-2xl">
+              <div className="hal-display text-lg tracking-[0.3em] text-ink sm:text-2xl">
                 INTERSTELLAR TRANSIT
               </div>
-              <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-red-400/80">
+              <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-neutral-400">
                 DESTINATION {star.name} · JOVIAN DEPARTURE SOLUTION · CRUISE 0.100 C
               </div>
             </div>
 
-            <div className="mx-auto grid max-w-2xl grid-cols-3 gap-3 border border-white/10 bg-black/40 p-3 text-center sm:p-4">
+            <div className="mx-auto grid max-w-2xl grid-cols-3 gap-3 border border-ink/10 bg-black/40 p-3 text-center sm:p-4">
               <div>
-                <div className="hal-display text-xl text-amber-300 glow-amber sm:text-3xl">
+                <div className="hal-display glow-phos text-xl text-phos sm:text-3xl">
                   {years.toFixed(1)}
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
@@ -187,7 +192,7 @@ export function TransitScreen({
                 </div>
               </div>
               <div>
-                <div className="hal-display text-xl text-neutral-100 sm:text-3xl">
+                <div className="hal-display text-xl text-ink sm:text-3xl">
                   {remainingLy.toFixed(2)}
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
@@ -195,7 +200,7 @@ export function TransitScreen({
                 </div>
               </div>
               <div>
-                <div className="hal-display text-xl text-emerald-300 sm:text-3xl">
+                <div className="hal-display text-xl text-ink sm:text-3xl">
                   207
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
@@ -207,9 +212,9 @@ export function TransitScreen({
             <TransitPlot star={star} payloadMassT={payloadMassT} years={years} />
 
             <div className="mx-auto max-w-4xl">
-              <div className="h-2 border border-white/15 bg-white/5">
+              <div className="relative h-2 border border-ink/15 bg-ink/5">
                 <div
-                  className="h-full bg-gradient-to-r from-red-600 via-red-500 to-amber-400 transition-[width] duration-100"
+                  className="h-full bg-ink/85 transition-[width] duration-100"
                   style={{ width: `${(years / totalYears) * 100}%` }}
                 />
               </div>
@@ -225,10 +230,10 @@ export function TransitScreen({
         {step >= 3 && (
           <div className="fade-up space-y-6">
             <div className="text-center">
-              <div className="hal-display text-xl tracking-[0.3em] text-neutral-100 sm:text-2xl">
+              <div className="hal-display text-xl tracking-[0.3em] text-ink sm:text-2xl">
                 {hasProbe ? "VLBI SURVEY RELAY" : "PASSIVE GRAVIMETRIC SCAN"}
               </div>
-              <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-red-400/80">
+              <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-neutral-400">
                 SYSTEM ENTRY — {star.name} — {new Date().getFullYear() + Math.round(totalYears) - 2026 + 2098} SHIP CALENDAR
               </div>
             </div>
@@ -242,14 +247,14 @@ export function TransitScreen({
                     className={cn(
                       "hal-mono border px-3 py-3 text-center transition-all duration-500",
                       found
-                        ? "border-red-500/60 bg-red-500/10 opacity-100"
-                        : "border-white/10 opacity-30"
+                        ? "border-phos/60 bg-phos/10 opacity-100"
+                        : "border-ink/10 opacity-30"
                     )}
                   >
                     <div
                       className={cn(
                         "text-xs tracking-widest",
-                        found ? "text-red-300" : "text-neutral-600"
+                        found ? "text-phos" : "text-neutral-600"
                       )}
                     >
                       {found ? p.designation : "——"}
@@ -266,7 +271,7 @@ export function TransitScreen({
 
             {step >= 4 && (
               <div className="fade-in text-center">
-                <div className="hal-mono text-xs text-amber-300 glow-amber">
+                <div className="hal-mono glow-phos text-xs text-phos">
                   {hasProbe
                     ? `SURVEY COMPLETE — ${planets.length} WORLDS · ${landable} LANDABLE`
                     : "MASS DETECTION ONLY — SURFACE CONDITIONS UNKNOWN"}

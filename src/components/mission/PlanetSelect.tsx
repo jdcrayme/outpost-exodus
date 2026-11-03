@@ -18,18 +18,18 @@ const KIND_LABEL: Record<Planet["kind"], string> = {
 };
 
 function ratingColor(r: string) {
-  if (r.startsWith("A") || r.startsWith("B")) return "text-emerald-300 border-emerald-500/60";
+  if (r.startsWith("A") || r.startsWith("B")) return "text-phos border-phos/60";
   if (r.startsWith("C")) return "text-amber-300 border-amber-400/60";
   return "text-red-400 border-red-500/60";
 }
 
 function Redacted({ label }: { label: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-white/5 py-1">
+    <div className="flex items-baseline justify-between gap-3 border-b border-ink/5 py-1">
       <span className="hal-mono text-[10px] tracking-widest text-neutral-500 uppercase">
         {label}
       </span>
-      <span className="hal-mono text-right text-[11px] tracking-widest text-red-500/70">
+      <span className="hal-mono text-right text-[11px] tracking-widest text-neutral-600">
         ▮▮▮▮ UNRESOLVED
       </span>
     </div>
@@ -83,7 +83,7 @@ export function PlanetSelect({
         <HudPanel
           title="Candidate Worlds"
           code={hasProbe ? "VLBI DATA" : "GRAVIMETRIC ONLY"}
-          accent={hasProbe ? "amber" : "red"}
+          accent={hasProbe ? "phos" : "red"}
           bodyClassName="p-0"
         >
           <div className="hal-scroll max-h-64 overflow-y-auto">
@@ -95,7 +95,7 @@ export function PlanetSelect({
                   onClick={() => pick(p.id)}
                   aria-pressed={isSel}
                   className={cn(
-                    "flex w-full items-center gap-3 border-b border-white/5 px-3 py-2.5 text-left transition-colors hover:bg-white/5",
+                    "flex w-full items-center gap-3 border-b border-ink/5 px-3 py-2.5 text-left transition-colors hover:bg-ink/5",
                     isSel && "hud-row-selected"
                   )}
                 >
@@ -110,7 +110,7 @@ export function PlanetSelect({
                   <span
                     className={cn(
                       "hal-mono w-24 shrink-0 text-xs tracking-widest",
-                      isSel ? "text-red-300" : "text-neutral-200"
+                      isSel ? "text-ink" : "text-neutral-200"
                     )}
                   >
                     {p.designation}
@@ -131,7 +131,7 @@ export function PlanetSelect({
                       {p.rating}
                     </span>
                   ) : (
-                    <span className="hal-mono shrink-0 border border-red-500/40 px-1.5 text-[9px] text-red-500/70">
+                    <span className="hal-mono shrink-0 border border-amber-400/40 px-1.5 text-[9px] text-amber-400/70">
                       ??
                     </span>
                   )}
@@ -157,15 +157,15 @@ export function PlanetSelect({
         >
           {!planet ? (
             <div className="hal-mono flex h-full min-h-64 flex-col items-center justify-center gap-3 p-6 text-center text-[11px] text-neutral-600">
-              <span className="reticle-spin text-2xl text-red-500/50">◎</span>
+              <span className="reticle-spin text-2xl text-neutral-400/60">◎</span>
               AWAITING WORLD SELECTION
             </div>
           ) : (
             <div className="hal-scroll max-h-[32rem] overflow-y-auto lg:max-h-[calc(100vh-26rem)]">
               {/* scan render */}
-              <div className="relative border-b border-white/10 bg-black">
+              <div className="relative border-b border-ink/10 bg-black">
                 <PlanetScan planet={planet} blind={!hasProbe} />
-                <div className="hal-mono absolute left-2 top-2 text-[9px] tracking-widest text-red-400/80">
+                <div className="hal-mono absolute left-2 top-2 text-[9px] tracking-widest text-phos/80">
                   {hasProbe ? "VLBI RENDER · LIVE" : "RECEIVER STATIC"}
                 </div>
               </div>
@@ -173,7 +173,7 @@ export function PlanetSelect({
               <div className="p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div>
-                    <h3 className="hal-display text-sm tracking-[0.2em] text-neutral-100">
+                    <h3 className="hal-display text-sm tracking-[0.2em] text-ink">
                       {planet.designation}
                     </h3>
                     <div className="hal-mono mt-0.5 text-[10px] tracking-widest text-neutral-500">
@@ -185,7 +185,7 @@ export function PlanetSelect({
                   </div>
                   {hasProbe && (
                     <div className="text-right">
-                      <div className="hal-display text-2xl leading-none text-neutral-100">
+                      <div className="hal-display glow-ink text-2xl leading-none text-ink">
                         {planet.suitability}
                       </div>
                       <div
@@ -251,11 +251,11 @@ export function PlanetSelect({
                     />
                     <DataRow label="MOONS" value={planet.moons} />
 
-                    <div className="mt-4 space-y-2.5">
-                      <Gauge label="MINERAL DENSITY" value={planet.mineralDensity} />
-                      <Gauge label="SEISMIC ACTIVITY" value={planet.seismic} invert />
-                      <Gauge label="RADIATION" value={planet.radiation} invert />
-                      <Gauge label="SUITABILITY" value={planet.suitability} />
+                    <div className="mt-4 grid grid-cols-2 justify-items-center gap-2">
+                      <Gauge label="MINERAL DENSITY" value={planet.mineralDensity} size={124} />
+                      <Gauge label="SEISMIC ACTIVITY" value={planet.seismic} invert size={124} />
+                      <Gauge label="RADIATION" value={planet.radiation} invert size={124} />
+                      <Gauge label="SUITABILITY" value={planet.suitability} size={124} />
                     </div>
                   </>
                 ) : (
@@ -270,7 +270,7 @@ export function PlanetSelect({
                 )}
 
                 {hasProbe && (
-                  <p className="hal-mono mt-3 border-l border-amber-400/40 pl-2.5 text-[10px] leading-relaxed text-neutral-400">
+                  <p className="hal-mono mt-3 border-l border-phos/40 pl-2.5 text-[10px] leading-relaxed text-neutral-400">
                     {planet.notes}
                   </p>
                 )}
@@ -278,7 +278,7 @@ export function PlanetSelect({
             </div>
           )}
 
-          <div className="border-t border-white/10 p-3">
+          <div className="border-t border-ink/10 p-3">
             <HudButton
               disabled={!planet || !planet.landable}
               className="w-full"

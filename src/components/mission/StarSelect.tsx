@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
 
 const FLARE_STYLE: Record<FlareRisk, string> = {
   NONE: "text-neutral-400 border-neutral-600",
-  LOW: "text-emerald-300 border-emerald-500/50",
+  LOW: "text-phos border-phos/50",
   MODERATE: "text-amber-300 border-amber-400/60",
   HIGH: "text-orange-400 border-orange-500/70",
-  EXTREME: "text-red-400 border-red-500/70 glow-red",
+  EXTREME: "text-red-400 border-red-500/70",
 };
 
 export function StarSelect({
@@ -55,7 +55,7 @@ export function StarSelect({
                     pick(s.id);
                   }}
                   className={cn(
-                    "block w-full border-b border-white/5 px-3 py-2.5 text-left transition-colors hover:bg-white/5",
+                    "block w-full border-b border-ink/5 px-3 py-2.5 text-left transition-colors hover:bg-ink/5",
                     isSel && "hud-row-selected"
                   )}
                   aria-pressed={isSel}
@@ -64,7 +64,7 @@ export function StarSelect({
                     <span
                       className={cn(
                         "hal-mono text-xs tracking-wider",
-                        isSel ? "text-red-300" : "text-neutral-200"
+                        isSel ? "text-ink" : "text-neutral-200"
                       )}
                     >
                       {s.name}
@@ -90,7 +90,7 @@ export function StarSelect({
               );
             })}
           </div>
-          <div className="hal-mono border-t border-white/10 px-3 py-1.5 text-[9px] tracking-widest text-neutral-600">
+          <div className="hal-mono border-t border-ink/10 px-3 py-1.5 text-[9px] tracking-widest text-neutral-600">
             {STARS.length} CANDIDATES · R ≤ 12 LY · DRAG CHART TO ROTATE
           </div>
         </HudPanel>
@@ -115,13 +115,13 @@ export function StarSelect({
         <HudPanel
           title="Destination Dossier"
           code={star ? `DOSS-${star.shortName}` : "DOSS-—"}
-          accent="amber"
+          accent="white"
           className="h-full"
           bodyClassName="p-0"
         >
           {!star ? (
             <div className="hal-mono flex h-full min-h-48 flex-col items-center justify-center gap-3 p-6 text-center text-[11px] text-neutral-600">
-              <span className="reticle-spin text-2xl text-red-500/50">◎</span>
+              <span className="reticle-spin text-2xl text-neutral-400/60">◎</span>
               AWAITING DESTINATION SELECTION
               <span className="text-neutral-700">
                 SELECT FROM CATALOG OR CHART
@@ -129,10 +129,10 @@ export function StarSelect({
             </div>
           ) : (
             <div className="hal-scroll max-h-[26rem] overflow-y-auto p-4 lg:max-h-[calc(100vh-22rem)]">
-              <h3 className="hal-display mb-1 text-sm tracking-[0.2em] text-neutral-100">
+              <h3 className="hal-display mb-1 text-sm tracking-[0.2em] text-ink">
                 {star.name}
               </h3>
-              <div className="hal-mono mb-3 text-[10px] tracking-widest text-amber-300/80">
+              <div className="hal-mono mb-3 text-[10px] tracking-widest text-phos/80">
                 {star.catalog}
               </div>
 
@@ -151,11 +151,11 @@ export function StarSelect({
               />
               <DataRow label="KNOWN WORLDS" value={star.knownWorlds} />
 
-              <div className="my-3 border border-amber-400/20 bg-amber-400/5 p-2.5">
-                <div className="hal-mono text-[10px] tracking-widest text-amber-300">
+              <div className="my-3 border border-phos/25 bg-phos/5 p-2.5">
+                <div className="hal-mono text-[10px] tracking-widest text-phos">
                   TRANSIT SOLUTION @ 0.1 C
                 </div>
-                <div className="hal-display mt-1 text-xl tracking-widest text-amber-200 glow-amber">
+                <div className="hal-display glow-phos mt-1 text-xl tracking-widest text-phos">
                   {Math.round(transitYears(star))} YEARS
                 </div>
                 <div className="hal-mono mt-1 text-[10px] text-neutral-500">
@@ -168,7 +168,7 @@ export function StarSelect({
               </p>
             </div>
           )}
-          <div className="border-t border-white/10 p-3">
+          <div className="border-t border-ink/10 p-3">
             <HudButton
               disabled={!star}
               className="w-full"

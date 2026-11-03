@@ -85,10 +85,10 @@ export function OrbitMap({
       ctx.beginPath();
       ctx.ellipse(cx, cy, rOut, rOut * flatten, 0, 0, Math.PI * 2);
       ctx.ellipse(cx, cy, rIn, rIn * flatten, 0, 0, Math.PI * 2, true);
-      ctx.fillStyle = "rgba(255,176,0,0.07)";
+      ctx.fillStyle = "rgba(123,235,166,0.06)";
       ctx.fill("evenodd");
       ctx.setLineDash([3, 5]);
-      ctx.strokeStyle = "rgba(255,176,0,0.35)";
+      ctx.strokeStyle = "rgba(123,235,166,0.35)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.ellipse(cx, cy, rOut, rOut * flatten, 0, 0, Math.PI * 2);
@@ -97,7 +97,7 @@ export function OrbitMap({
       ctx.ellipse(cx, cy, rIn, rIn * flatten, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
-      ctx.fillStyle = "rgba(255,176,0,0.55)";
+      ctx.fillStyle = "rgba(123,235,166,0.55)";
       ctx.font = "9px 'IBM Plex Mono', monospace";
       ctx.fillText("HABITABLE ZONE", cx - 44, cy - rOut * flatten - 6);
 
@@ -108,7 +108,7 @@ export function OrbitMap({
         ctx.ellipse(cx, cy, r, r * flatten, 0, 0, Math.PI * 2);
         ctx.strokeStyle =
           p.id === selRef.current
-            ? "rgba(255,42,30,0.5)"
+            ? "rgba(232,230,220,0.55)"
             : "rgba(255,255,255,0.16)";
         ctx.lineWidth = p.id === selRef.current ? 1.4 : 1;
         ctx.stroke();
@@ -164,7 +164,7 @@ export function OrbitMap({
 
         const isSelected = p.id === selRef.current;
         if (p.inHabitableZone && !isSelected) {
-          ctx.strokeStyle = "rgba(255,176,0,0.55)";
+          ctx.strokeStyle = "rgba(123,235,166,0.5)";
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.arc(x, y, size + 3.5, 0, Math.PI * 2);
@@ -174,7 +174,7 @@ export function OrbitMap({
           ctx.save();
           ctx.translate(x, y);
           ctx.rotate(t / 1400);
-          ctx.strokeStyle = "rgba(255,42,30,0.95)";
+          ctx.strokeStyle = "rgba(232,230,220,0.95)";
           ctx.lineWidth = 1.4;
           for (let q = 0; q < 4; q++) {
             ctx.beginPath();
@@ -189,12 +189,12 @@ export function OrbitMap({
           }
           ctx.restore();
           // leader line + label
-          ctx.strokeStyle = "rgba(255,42,30,0.5)";
+          ctx.strokeStyle = "rgba(232,230,220,0.5)";
           ctx.beginPath();
           ctx.moveTo(x, y - size - 9);
           ctx.lineTo(x, y - size - 20);
           ctx.stroke();
-          ctx.fillStyle = "rgba(255,120,100,1)";
+          ctx.fillStyle = "rgba(232,230,220,1)";
           ctx.font = "600 10px 'IBM Plex Mono', monospace";
           ctx.fillText(p.designation, x + 4, y - size - 23);
         }

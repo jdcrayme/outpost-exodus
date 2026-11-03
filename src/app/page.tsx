@@ -17,7 +17,8 @@ import {
   HAL_PAYLOAD_OK,
 } from "@/lib/mission/hal";
 import { CrtOverlay, TypeLine } from "@/components/mission/TypeLine";
-import { HalEye } from "@/components/mission/HalEye";
+import { PhaseDial } from "@/components/mission/PhaseDial";
+import { Waveform } from "@/components/mission/Waveform";
 import { BootScreen } from "@/components/mission/BootScreen";
 import { StarSelect } from "@/components/mission/StarSelect";
 import { EquipmentScreen } from "@/components/mission/EquipmentScreen";
@@ -60,6 +61,7 @@ export default function OutpostPage() {
   const [equipment, setEquipment] = useState<string[]>(["seed"]);
   const [planetId, setPlanetId] = useState<string | null>(null);
   const [halLine, setHalLine] = useState("");
+  const [speaking, setSpeaking] = useState(false);
   const [clock, setClock] = useState(0);
   const [audioOn, setAudioOn] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -101,6 +103,11 @@ export default function OutpostPage() {
   }, [phase]);
 
   const speak = useCallback((line: string) => setHalLine(line), []);
+
+  // the voice channel animates while HAL is delivering a line
+  useEffect(() => {
+    if (halLine) setSpeaking(true);
+  }, [halLine]);
 
   // ── transitions ──
   const initiate = () => {
@@ -177,15 +184,17 @@ export default function OutpostPage() {
   );
 
   return (
-    <div className="hal-mono flex min-h-screen flex-col bg-[#030304] text-neutral-200">
+    <div className="hal-mono relative flex min-h-screen flex-col bg-[#030304] text-neutral-200">
+      {/* engineering graph paper underlay */}
+      <div className="grid-paper pointer-events-none fixed inset-0" aria-hidden="true" />
       <CrtOverlay />
 
       {/* ── top status bar ── */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 border-b border-ink/10 bg-black/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-2">
-          <HalEye size={34} label={false} glow />
+          <PhaseDial phaseIdx={phaseIdx} size={36} className="hidden sm:block" />
           <div className="hidden sm:block">
-            <div className="hal-display text-[11px] tracking-[0.3em] text-neutral-100">
+            <div className="hal-display text-[11px] tracking-[0.3em] text-ink">
               OUTPOST
             </div>
             <div className="text-[8px] tracking-[0.3em] text-neutral-500">
@@ -207,7 +216,7 @@ export default function OutpostPage() {
                     <div
                       className={cn(
                         "h-px w-8",
-                        done || active ? "bg-red-500/60" : "bg-white/15"
+                        done ? "bg-phos/50" : "bg-ink/15"
                       )}
                     />
                   )}
@@ -215,12 +224,18 @@ export default function OutpostPage() {
                     className={cn(
                       "flex items-center gap-2 border px-2.5 py-1",
                       active
-                        ? "border-red-500/70 bg-red-500/10 text-red-300"
+                        ? "border-ink/50 bg-ink/10 text-ink"
                         : done
-                          ? "border-red-500/30 text-red-400/60"
-                          : "border-white/10 text-neutral-600"
+                          ? "border-ink/20 text-ink/50"
+                          : "border-ink/10 text-ink/30"
                     )}
                   >
+                    {active && (
+                      <span
+                        className="hal-blink inline-block h-1.5 w-1.5 bg-phos"
+                        aria-hidden="true"
+                      />
+                    )}
                     <span className="text-[9px]">{p.code}</span>
                     <span className="text-[9px] tracking-[0.2em]">{p.label}</span>
                   </div>
@@ -234,7 +249,7 @@ export default function OutpostPage() {
               <div className="text-[8px] tracking-[0.3em] text-neutral-500">
                 MISSION CLOCK
               </div>
-              <div className="text-[11px] tabular-nums text-amber-300">
+              <div className="text-[11px] tabular-nums text-phos">
                 T+{formatClock(clock)}
               </div>
             </div>
@@ -244,8 +259,8 @@ export default function OutpostPage() {
               className={cn(
                 "flex h-9 w-9 items-center justify-center border transition-colors",
                 audioOn
-                  ? "border-red-500/60 text-red-400"
-                  : "border-white/15 text-neutral-500 hover:text-neutral-200"
+                  ? "border-phos/60 text-phos"
+                  : "border-ink/15 text-neutral-500 hover:text-ink"
               )}
             >
               {audioOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
@@ -259,8 +274,8 @@ export default function OutpostPage() {
               className={cn(
                 "flex h-9 w-9 items-center justify-center border transition-colors",
                 logOpen
-                  ? "border-amber-400/60 text-amber-300"
-                  : "border-white/15 text-neutral-500 hover:text-neutral-200"
+                  ? "border-ink/60 text-ink"
+                  : "border-ink/15 text-neutral-500 hover:text-ink"
               )}
             >
               {logOpen ? <X size={15} /> : <NotebookPen size={15} />}
@@ -272,9 +287,9 @@ export default function OutpostPage() {
       {/* ── phase header ── */}
       {header && phase !== "TRANSIT" && (
         <div className="mx-auto w-full max-w-[1600px] px-3 pt-4">
-          <div className="fade-up flex flex-wrap items-end justify-between gap-2 border-b border-white/10 pb-2">
+          <div className="fade-up flex flex-wrap items-end justify-between gap-2 border-b border-ink/10 pb-2">
             <div>
-              <h1 className="hal-display text-sm tracking-[0.28em] text-neutral-100 sm:text-base">
+              <h1 className="hal-display text-sm tracking-[0.28em] text-ink sm:text-base">
                 {header.title}
               </h1>
               <p className="mt-1 max-w-3xl text-[10px] leading-relaxed tracking-wider text-neutral-500 sm:text-[11px]">
@@ -287,7 +302,7 @@ export default function OutpostPage() {
                   setPhase("STAR");
                   halAudio.select();
                 }}
-                className="border border-white/15 px-3 py-1.5 text-[9px] tracking-[0.25em] text-neutral-500 hover:border-white/40 hover:text-neutral-200"
+                className="border border-ink/15 px-3 py-1.5 text-[9px] tracking-[0.25em] text-neutral-500 hover:border-ink/40 hover:text-ink"
               >
                 ◂ REVISE DESTINATION
               </button>
@@ -341,17 +356,30 @@ export default function OutpostPage() {
         )}
       </main>
 
-      {/* ── HAL dialogue bar ── */}
-      <footer className="sticky bottom-0 z-40 mt-auto border-t border-white/10 bg-black/85 backdrop-blur-sm">
+      {/* ── computer dialogue bar — voice channel on the comm panel ── */}
+      <footer className="sticky bottom-0 z-40 mt-auto border-t border-ink/10 bg-black/85 backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-2.5">
-          <HalEye size={40} label={false} />
+          <div className="flex shrink-0 flex-col items-center gap-1 border border-ink/15 bg-black/60 px-2 py-1.5">
+            <Waveform active={speaking} width={132} height={26} />
+            <div className="hal-mono text-[7px] tracking-[0.22em] text-neutral-600">
+              VOICE CH-1 ·{" "}
+              <span className={speaking ? "text-phos" : ""}>
+                {speaking ? "ACTIVE" : "IDLE"}
+              </span>
+            </div>
+          </div>
           <div className="min-w-0 flex-1">
             <div className="mb-0.5 text-[8px] tracking-[0.3em] text-neutral-600">
               HAL 9000 · SHIPBOARD ARTIFICIAL INTELLIGENCE · Urbana, Illinois
             </div>
             <div className="truncate text-[11px] text-neutral-300 sm:text-xs">
               {halLine ? (
-                <TypeLine key={halLine} text={halLine} speed={22} />
+                <TypeLine
+                  key={halLine}
+                  text={halLine}
+                  speed={22}
+                  onDone={() => setSpeaking(false)}
+                />
               ) : (
                 <span className="text-neutral-600">
                   ── awaiting input ──
@@ -365,13 +393,13 @@ export default function OutpostPage() {
       {/* ── mission log drawer ── */}
       <aside
         className={cn(
-          "fixed right-0 top-0 z-[70] h-full w-80 max-w-[85vw] border-l border-white/15 bg-black/95 transition-transform duration-300",
+          "fixed right-0 top-0 z-[70] h-full w-80 max-w-[85vw] border-l border-ink/15 bg-black/95 transition-transform duration-300",
           logOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-label="Mission log"
       >
-        <div className="border-b border-white/10 p-3">
-          <div className="hal-display text-[11px] tracking-[0.25em] text-amber-300">
+        <div className="border-b border-ink/10 p-3">
+          <div className="hal-display text-[11px] tracking-[0.25em] text-ink">
             MISSION LOG
           </div>
           <div className="mt-0.5 text-[9px] tracking-widest text-neutral-600">
@@ -385,9 +413,9 @@ export default function OutpostPage() {
           {log.map((e, i) => (
             <div
               key={i}
-              className="border-b border-white/5 py-1.5 text-[10px] leading-relaxed"
+              className="border-b border-ink/5 py-1.5 text-[10px] leading-relaxed"
             >
-              <span className="mr-2 text-red-500/70 tabular-nums">T+{e.t}</span>
+              <span className="mr-2 text-phos/70 tabular-nums">T+{e.t}</span>
               <span className="text-neutral-300">{e.text}</span>
             </div>
           ))}

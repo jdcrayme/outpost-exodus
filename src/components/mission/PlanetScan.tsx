@@ -196,21 +196,21 @@ export function PlanetScan({
       // scan sweep line
       if (reveal < 1) {
         const sy = (canvas.height * (reveal * 1.05)) | 0;
-        ctx.fillStyle = "rgba(255,42,30,0.85)";
+        ctx.fillStyle = "rgba(123,235,166,0.85)";
         ctx.fillRect(0, sy, canvas.width, 2);
-        ctx.fillStyle = "rgba(255,42,30,0.15)";
+        ctx.fillStyle = "rgba(123,235,166,0.15)";
         ctx.fillRect(0, sy - 12, canvas.width, 12);
       }
 
       if (blind) {
         ctx.fillStyle = "rgba(0,0,0,0.35)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "rgba(255,42,30,0.95)";
+        ctx.fillStyle = "rgba(245,199,106,0.95)";
         ctx.font = "600 22px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
         ctx.fillText("NO SIGNAL", canvas.width / 2, canvas.height / 2 - 2);
         ctx.font = "12px 'IBM Plex Mono', monospace";
-        ctx.fillStyle = "rgba(255,120,100,0.8)";
+        ctx.fillStyle = "rgba(245,199,106,0.8)";
         ctx.fillText(
           "VLBI PROBE NOT ABOARD",
           canvas.width / 2,

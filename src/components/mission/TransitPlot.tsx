@@ -38,8 +38,9 @@ const CY = 290;
 const PX_AU = 40;
 const INSET = { cx: 492, cy: 84, r: 74 };
 const INSET_SCALE = 2.5e-5; // px per km inside the flyby inset
-const AMBER = "#fbbf24";
-const RED = "#ff2a1e";
+const IVORY = "#e8e6dc"; // plotted geometry
+const PHOS = "#7beba6"; // the live ship
+const AMBER = "#f5c76a"; // propulsive events
 
 function toScreen(rAu: number, angDeg: number): [number, number] {
   return [
@@ -181,14 +182,14 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
       >
         <defs>
           <filter id="tp-glow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="2.2" result="b" />
+            <feGaussianBlur stdDeviation="1.4" result="b" />
             <feMerge>
               <feMergeNode in="b" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          <filter id="tp-glow-red" x="-120%" y="-120%" width="340%" height="340%">
-            <feGaussianBlur stdDeviation="3" result="b" />
+          <filter id="tp-glow-hi" x="-120%" y="-120%" width="340%" height="340%">
+            <feGaussianBlur stdDeviation="1.8" result="b" />
             <feMerge>
               <feMergeNode in="b" />
               <feMergeNode in="SourceGraphic" />
@@ -249,7 +250,7 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
             <text x={geo.pE[0] - 9} y={geo.pE[1] - 12} textAnchor="end" className="hal-mono" fontSize="8" fill="#a3a3a3">
               EARTH — TJI BURN 2098.274
             </text>
-            <text x={geo.pE[0] - 9} y={geo.pE[1] - 2} textAnchor="end" className="hal-mono" fontSize="8" fill={AMBER}>
+            <text x={geo.pE[0] - 9} y={geo.pE[1] - 2} textAnchor="end" className="hal-mono" fontSize="8" fill={IVORY}>
               Δv {TRANSFER.dvTjiKms.toFixed(2)} KM/S
             </text>
           </g>
@@ -270,7 +271,7 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
         <path
           d={geo.transferPath}
           fill="none"
-          stroke={AMBER}
+          stroke={IVORY}
           strokeWidth="1.6"
           filter="url(#tp-glow)"
           pathLength={1}
@@ -281,7 +282,7 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
         <line
           x1={geo.pJ[0]} y1={geo.pJ[1]}
           x2={geo.exitEnd[0]} y2={geo.exitEnd[1]}
-          stroke={AMBER} strokeOpacity="0.9" strokeWidth="1.2"
+          stroke={IVORY} strokeOpacity="0.9" strokeWidth="1.2"
           pathLength={1}
           className="draw-on"
           style={{ animationDelay: "2.5s", animationDuration: "0.9s" }}
@@ -292,10 +293,10 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
           <rect
             x={geo.ignition[0] - 2.6} y={geo.ignition[1] - 2.6}
             width="5.2" height="5.2"
-            fill={RED} filter="url(#tp-glow-red)"
+            fill={AMBER} filter="url(#tp-glow-hi)"
             transform={`rotate(45 ${geo.ignition[0]} ${geo.ignition[1]})`}
           />
-          <text x={VB_W - 8} y={geo.ignition[1] + 16} textAnchor="end" className="hal-mono" fontSize="7.5" fill={RED}>
+          <text x={VB_W - 8} y={geo.ignition[1] + 16} textAnchor="end" className="hal-mono" fontSize="7.5" fill={AMBER}>
             FUSION IGNITION
           </text>
           <text x={VB_W - 8} y={geo.ignition[1] + 27} textAnchor="end" className="hal-mono" fontSize="7.5" fill="#737373">
@@ -307,10 +308,10 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
         <g className="fade-in" style={{ animationDelay: "3.3s" }}>
           <path
             d={`M${geo.exitEnd[0] - 9},${geo.exitEnd[1] - 6.4} L${geo.exitEnd[0] + 1},${geo.exitEnd[1]} L${geo.exitEnd[0] - 9},${geo.exitEnd[1] + 6.4} Z`}
-            fill={AMBER} filter="url(#tp-glow)"
+            fill={IVORY} filter="url(#tp-glow)"
             transform={`rotate(${geo.exitAng} ${geo.exitEnd[0]} ${geo.exitEnd[1]})`}
           />
-          <text x={geo.exitEnd[0] - 4} y={geo.exitEnd[1] - 44} textAnchor="end" className="hal-mono" fontSize="8.5" fill={AMBER}>
+          <text x={geo.exitEnd[0] - 4} y={geo.exitEnd[1] - 44} textAnchor="end" className="hal-mono" fontSize="8.5" fill={IVORY}>
             ESCAPE ASYMPTOTE
           </text>
           <text x={geo.exitEnd[0] - 4} y={geo.exitEnd[1] - 32} textAnchor="end" className="hal-mono" fontSize="8" fill="#a3a3a3">
@@ -332,13 +333,13 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
               x1={geo.periPt[0]} y1={geo.periPt[1]}
               x2={geo.periPt[0] + (geo.periPt[0] - INSET.cx) * 0.55}
               y2={geo.periPt[1] + (geo.periPt[1] - INSET.cy) * 0.55}
-              stroke={AMBER} strokeWidth="0.8"
+              stroke={IVORY} strokeWidth="0.8"
             />
             {/* v∞ labels + turning angle */}
             <text x={INSET.cx - 44} y={INSET.cy - 50} className="hal-mono" fontSize="7.5" fill="#a3a3a3">
               V∞ {TRANSFER.vInfJupKms.toFixed(2)} KM/S
             </text>
-            <text x={INSET.cx - 46} y={INSET.cy + 44} className="hal-mono" fontSize="7.5" fill={AMBER}>
+            <text x={INSET.cx - 46} y={INSET.cy + 44} className="hal-mono" fontSize="7.5" fill={IVORY}>
               δ {TRANSFER.deltaDeg.toFixed(1)}°
             </text>
             {/* caption + scale */}
@@ -360,7 +361,7 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
             <path
               d={geo.hyperbolaPath}
               fill="none"
-              stroke={AMBER}
+              stroke={IVORY}
               strokeWidth="1.4"
               filter="url(#tp-glow)"
               pathLength={1}
@@ -370,9 +371,9 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
           </g>
         </g>
 
-        {/* ship marker */}
+        {/* ship marker — the live vehicle, in phosphor */}
         <g ref={markerRef} opacity="0">
-          <path d="M-5,-3.4 L6.5,0 L-5,3.4 Z" fill={RED} filter="url(#tp-glow-red)" />
+          <path d="M-5,-3.4 L6.5,0 L-5,3.4 Z" fill={PHOS} filter="url(#tp-glow-hi)" />
         </g>
 
         {/* en-route caret (after exit) */}
@@ -380,10 +381,10 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
           <g className="fade-in">
             <rect
               x={geo.exitEnd[0] - 2.5} y={geo.exitEnd[1] - 2.5}
-              width="5" height="5" fill={RED}
-              className="hal-blink" filter="url(#tp-glow-red)"
+              width="5" height="5" fill={PHOS}
+              className="hal-blink" filter="url(#tp-glow-hi)"
             />
-            <text x={geo.exitEnd[0] - 8} y={geo.exitEnd[1] + 18} textAnchor="end" className="hal-mono hal-blink" fontSize="8" fill="#ff6b5e">
+            <text x={geo.exitEnd[0] - 8} y={geo.exitEnd[1] + 18} textAnchor="end" className="hal-mono hal-blink" fontSize="8" fill="#a5f0c3">
               EN ROUTE
             </text>
           </g>
@@ -445,7 +446,7 @@ const EquationPlate = memo(function EquationPlate({
   const shipT = SHIP_DRY_T + PROP_T + payloadMassT;
 
   return (
-    <HudPanel title="Departure Solution" code="MATH.03" accent="amber" bodyClassName="p-3">
+    <HudPanel title="Departure Solution" code="MATH.03" accent="white" bodyClassName="p-3">
       <div className="space-y-2.5">
         {rows.map((r) => (
           <div key={r.label}>
@@ -459,7 +460,7 @@ const EquationPlate = memo(function EquationPlate({
           </div>
         ))}
       </div>
-      <div className="hal-mono mt-2.5 border-t border-white/10 pt-1.5 text-[8px] tracking-[0.18em] text-neutral-600">
+      <div className="hal-mono mt-2.5 border-t border-ink/10 pt-1.5 text-[8px] tracking-[0.18em] text-neutral-600">
         SUBSTITUTED FROM LIVE MISSION STATE — PAYLOAD {payloadMassT.toLocaleString()} T · SHIP{" "}
         {shipT.toLocaleString()} T · DEST {star.shortName}
       </div>
@@ -474,9 +475,9 @@ const PHASE_META: Record<
   { label: string; color: string; dot: string }
 > = {
   TJI: { label: "TJI COAST", color: "text-neutral-300", dot: "#d4d4d4" },
-  FLYBY: { label: "FLYBY", color: "text-amber-300", dot: "#fbbf24" },
-  BURN: { label: "FUSION BURN", color: "text-red-400", dot: "#ff2a1e" },
-  CRUISE: { label: "CRUISE 0.100 C", color: "text-amber-300", dot: "#fbbf24" },
+  FLYBY: { label: "FLYBY", color: "text-amber-300", dot: "#f5c76a" },
+  BURN: { label: "FUSION BURN", color: "text-amber-300", dot: "#f5c76a" },
+  CRUISE: { label: "CRUISE 0.100 C", color: "text-phos", dot: "#7beba6" },
 };
 
 function TelemetryPanel({ star, years }: { star: StarSystem; years: number }) {
@@ -498,7 +499,7 @@ function TelemetryPanel({ star, years }: { star: StarSystem; years: number }) {
 
   return (
     <HudPanel title="Telemetry — Forward Link" code="TLM.03" bodyClassName="p-3">
-      <div className="mb-2 flex items-center justify-between border border-white/10 bg-white/[0.03] px-2 py-1">
+      <div className="mb-2 flex items-center justify-between border border-ink/10 bg-ink/[0.03] px-2 py-1">
         <span className="hal-mono text-[8px] tracking-[0.3em] text-neutral-500">
           PHASE
         </span>

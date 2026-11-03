@@ -178,7 +178,7 @@ export function Starfield3D({
         ctx.save();
         ctx.setLineDash([4, 4]);
         ctx.lineDashOffset = -t / 40;
-        ctx.strokeStyle = "rgba(255,42,30,0.55)";
+        ctx.strokeStyle = "rgba(232,230,220,0.5)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(solP.s.x, solP.s.y);
@@ -190,7 +190,7 @@ export function Starfield3D({
         if (star) {
           const mx = (solP.s.x + selP.s.x) / 2;
           const my = (solP.s.y + selP.s.y) / 2;
-          ctx.fillStyle = "rgba(255,80,60,0.9)";
+          ctx.fillStyle = "rgba(123,235,166,0.95)";
           ctx.font = "10px 'IBM Plex Mono', monospace";
           ctx.fillText(`${star.distanceLy.toFixed(2)} LY`, mx + 6, my - 6);
         }
@@ -227,7 +227,7 @@ export function Starfield3D({
         // label
         ctx.font = `${isSelected ? "600 " : ""}10px 'IBM Plex Mono', monospace`;
         ctx.fillStyle = isSelected
-          ? "rgba(255,120,100,1)"
+          ? "rgba(232,230,220,1)"
           : isHover
             ? "rgba(255,255,255,0.95)"
             : "rgba(255,255,255,0.55)";
@@ -240,7 +240,7 @@ export function Starfield3D({
           ctx.translate(s.x, s.y);
           ctx.rotate((t / 1000) * (isSelected ? 0.7 : 0.35));
           ctx.strokeStyle = isSelected
-            ? "rgba(255,42,30,0.9)"
+            ? "rgba(232,230,220,0.9)"
             : "rgba(255,255,255,0.6)";
           ctx.lineWidth = 1.2;
           for (let q = 0; q < 4; q++) {
