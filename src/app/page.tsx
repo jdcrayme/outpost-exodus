@@ -16,15 +16,15 @@ import {
   halStarCommitted,
   HAL_PAYLOAD_OK,
 } from "@/lib/mission/hal";
-import { CrtOverlay, TypeLine } from "@/components/mission/TypeLine";
-import { PhaseDial } from "@/components/mission/PhaseDial";
-import { Waveform } from "@/components/mission/Waveform";
-import { BootScreen } from "@/components/mission/BootScreen";
-import { StarSelect } from "@/components/mission/StarSelect";
-import { EquipmentScreen } from "@/components/mission/EquipmentScreen";
-import { TransitScreen } from "@/components/mission/TransitScreen";
-import { PlanetSelect } from "@/components/mission/PlanetSelect";
-import { MissionProfile } from "@/components/mission/MissionProfile";
+import { CrtOverlay, TypeLine } from "@/components/common/TypeLine";
+import { PhaseDial } from "@/components/common/PhaseDial";
+import { Waveform } from "@/components/common/Waveform";
+import { BootScreen } from "@/screens/boot/BootScreen";
+import { StarSelect } from "@/screens/star-select/StarSelect";
+import { EquipmentScreen } from "@/screens/equipment/EquipmentScreen";
+import { TransitScreen } from "@/screens/transit/TransitScreen";
+import { PlanetSelect } from "@/screens/planet-select/PlanetSelect";
+import { MissionProfile } from "@/screens/profile/MissionProfile";
 import { cn } from "@/lib/utils";
 
 const PHASE_STEPS: { id: Phase; label: string; code: string }[] = [

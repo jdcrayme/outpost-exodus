@@ -11,7 +11,8 @@ engineering graph-paper grids, circular needle gauges, oscilloscope waveforms an
 Lissajous figures. HAL is present as a **voice channel** — a green waveform on the
 comm panel — not as a red eye.
 
-**Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · shadcn/ui
+**Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · custom
+HUD primitives (canvas / SVG / Web Audio — no component library)
 
 ## Quick start
 
@@ -67,17 +68,24 @@ The app is a single state machine, owned by `src/app/page.tsx`:
 ```
 src/
   app/                  # layout.tsx, page.tsx — page.tsx owns the mission state machine
-  components/mission/   # the screens and instrument widgets:
-                        #   StarSelect, EquipmentScreen, PlanetSelect, TransitPlot,
-                        #   OrbitMap, PlanetScan, Starfield3D, …
-                        #   ShipBlueprint — general-arrangement loadout drawing
-                        #                  (module hardpoints, 207 berth dots,
-                        #                   true-scale human, title block)
-                        #   Waveform   — HAL's voice channel oscilloscope
-                        #   Lissajous  — the 9000's neural pattern display
-                        #   ArcGauge   — circular needle gauge (dossier instrument bank)
-                        #   PhaseDial  — header mission-phase ring
-  components/ui/        # shadcn/ui primitives — copied in, fully owned, edit freely
+  screens/              # one folder per phase screen, private widgets colocated:
+                        #   boot/           — cold-start diagnostics
+                        #   star-select/    — StarSelect + Starfield3D (3D local neighborhood)
+                        #   equipment/      — EquipmentScreen + ShipBlueprint
+                        #                     (general-arrangement loadout drawing:
+                        #                     module hardpoints, 207 berth dots,
+                        #                     true-scale human, title block)
+                        #   transit/        — TransitScreen + TransitPlot
+                        #                     (Kepler-solved arc, live vis-viva plate)
+                        #   planet-select/  — PlanetSelect + OrbitMap (system chart)
+                        #   profile/        — final mission profile
+  components/common/    # instrument widgets shared across screens:
+                        #   HudPanel — panel chrome (HudButton, DataRow, Gauge) + ArcGauge
+                        #   Lissajous — the 9000's neural pattern display
+                        #   PlanetScan — VLBI surface scan
+                        #   TypeLine/CrtOverlay — typewriter dialogue / CRT overlay
+                        #   PhaseDial — header mission-phase ring
+                        #   Waveform — HAL's voice channel oscilloscope
   lib/mission/          # pure data + math, no React:
                         #   stars.ts      — star catalog
                         #   equipment.ts  — payload manifest
@@ -85,7 +93,6 @@ src/
                         #   astro.ts      — conic sections, Kepler solver, vis-viva
                         #   hal.ts        — HAL dialogue lines
                         #   audio.ts      — Web Audio synthesizer
-  hooks/
 public/fonts/           # self-hosted IBM Plex Mono
 docs/DESIGN_NOTES.md    # design charter, decisions, and roadmap record
 ```

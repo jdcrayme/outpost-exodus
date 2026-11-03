@@ -9,7 +9,7 @@ import {
   EQUIPMENT,
   EQUIPMENT_BY_ID,
 } from "@/lib/mission/equipment";
-import { HudPanel, HudButton, DataRow } from "./HudPanel";
+import { HudPanel, HudButton, DataRow } from "@/components/common/HudPanel";
 import { ShipBlueprint, useTickNumber } from "./ShipBlueprint";
 import { halAudio } from "@/lib/mission/audio";
 import { HAL_NO_VLBI, HAL_VLBI_ON } from "@/lib/mission/hal";

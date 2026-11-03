@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import type { Planet, StarSystem } from "@/lib/mission/types";
 import { transitYears } from "@/lib/mission/stars";
 import { missionState } from "@/lib/mission/astro";
-import { Lissajous } from "./Lissajous";
-import { HudButton } from "./HudPanel";
+import { Lissajous } from "@/components/common/Lissajous";
+import { HudButton } from "@/components/common/HudPanel";
 import { halAudio } from "@/lib/mission/audio";
 import {
   HAL_ARRIVAL,

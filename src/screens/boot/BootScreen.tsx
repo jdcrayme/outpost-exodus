@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Lissajous } from "./Lissajous";
-import { HudButton } from "./HudPanel";
-import { TypeLine } from "./TypeLine";
+import { Lissajous } from "@/components/common/Lissajous";
+import { HudButton } from "@/components/common/HudPanel";
+import { TypeLine } from "@/components/common/TypeLine";
 import { halAudio } from "@/lib/mission/audio";
 import { BOOT_PRELUDE, HAL_BOOT, HAL_BOOT_READY } from "@/lib/mission/hal";
 
