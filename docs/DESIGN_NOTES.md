@@ -70,7 +70,7 @@ starfield auto-rotation ~0.2×. The Discovery's displays drift; they never race.
 appearing and disappearing *on the outside of the starship*, giving a sense of
 scale — without abandoning the vector/instrument language.
 
-**Implementation** (`src/components/mission/ShipBlueprint.tsx`):
+**Implementation** (`src/screens/equipment/ShipBlueprint.tsx`):
 
 - A **side elevation of the Exodus drawn as an engineering general-arrangement
   drawing** in SVG, 1 user unit = 1 metre. 225 m overall: command sphere (3
@@ -173,7 +173,8 @@ colony-start risk event drawn from the seed.
 | `src/app/globals.css` | instrument layer: grid-paper, CRT overlay, draw-on, blueprint classes (`bp-*`) |
 | `src/lib/mission/engine.ts` | `mulberry32`, `hashString`, seeded system generation |
 | `src/lib/mission/equipment.ts` | payload catalog + capacities |
-| `src/components/mission/ShipBlueprint.tsx` | GA drawing + MOUNTS table + `useTickNumber` |
+| `src/screens/equipment/ShipBlueprint.tsx` | GA drawing + MOUNTS table + `useTickNumber` |
+| `src/components/common/` | shared instrument widgets (HudPanel bank, Lissajous, PlanetScan, TypeLine); one folder per screen under `src/screens/` |
 
 UI text is uppercase mono with wide tracking; warnings never shout in red
 unless they are real; every panel has a code (`SEC.ORB`, `OE-104-GA`...) —

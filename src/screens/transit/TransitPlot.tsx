@@ -4,7 +4,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import type { StarSystem } from "@/lib/mission/types";
-import { HudPanel, DataRow } from "./HudPanel";
+import { HudPanel, DataRow } from "@/components/common/HudPanel";
 import {
   TRANSFER,
   DEPART_ANGLE_DEG,

@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import type { Planet, StarSystem } from "@/lib/mission/types";
-import { HudPanel, DataRow, HudButton, Gauge } from "./HudPanel";
+import { HudPanel, DataRow, HudButton, Gauge } from "@/components/common/HudPanel";
 import { OrbitMap } from "./OrbitMap";
-import { PlanetScan } from "./PlanetScan";
+import { PlanetScan } from "@/components/common/PlanetScan";
 import { halAudio } from "@/lib/mission/audio";
 import { halPlanetSelected } from "@/lib/mission/hal";
 import { cn } from "@/lib/utils";

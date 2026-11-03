@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FlareRisk, StarSystem } from "@/lib/mission/types";
 import { STARS, transitYears } from "@/lib/mission/stars";
-import { HudPanel, DataRow, HudButton } from "./HudPanel";
+import { HudPanel, DataRow, HudButton } from "@/components/common/HudPanel";
 import { Starfield3D } from "./Starfield3D";
 import { halAudio } from "@/lib/mission/audio";
 import { halStarSelected } from "@/lib/mission/hal";
