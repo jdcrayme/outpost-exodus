@@ -1,0 +1,357 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ─── OUTPOST // EXODUS — HAL 9000 interface layer ─────────────────────────── */
+
+@font-face {
+  font-family: "Michroma";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/michroma-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ibmplexmono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/ibmplexmono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/ibmplexmono-600.woff2") format("woff2");
+}
+
+.hal-display {
+  font-family: "Michroma", "Eurostile", "Bank Gothic", ui-sans-serif, sans-serif;
+}
+.hal-mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* CRT scanlines + vignette + drifting refresh band */
+.crt-overlay {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+.crt-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+.crt-band {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.028),
+    transparent
+  );
+  height: 120px;
+  animation: crt-band-move 9s linear infinite;
+}
+@keyframes crt-band-move {
+  0% {
+    transform: translateY(-140px);
+  }
+  100% {
+    transform: translateY(110vh);
+  }
+}
+.crt-flicker {
+  animation: crt-flicker 6s steps(60) infinite;
+}
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.96; }
+  94% { opacity: 1; }
+  97% { opacity: 0.98; }
+  98% { opacity: 1; }
+}
+
+/* Phosphor glow text */
+.glow-red {
+  text-shadow:
+    0 0 6px rgba(255, 42, 30, 0.85),
+    0 0 18px rgba(255, 42, 30, 0.4);
+}
+.glow-amber {
+  text-shadow:
+    0 0 6px rgba(255, 176, 0, 0.7),
+    0 0 16px rgba(255, 176, 0, 0.3);
+}
+.glow-white {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+}
+
+/* Blinking block cursor */
+.hal-cursor::after {
+  content: "▮";
+  margin-left: 2px;
+  color: #ff2a1e;
+  animation: cursor-blink 1s steps(2) infinite;
+}
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* HAL eye breathing glow */
+.hal-eye-glow {
+  animation: hal-breathe 4.2s ease-in-out infinite;
+}
+@keyframes hal-breathe {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 30, 10, 0.45)) drop-shadow(0 0 34px rgba(255, 30, 10, 0.18)); }
+  50% { filter: drop-shadow(0 0 16px rgba(255, 40, 15, 0.75)) drop-shadow(0 0 52px rgba(255, 30, 10, 0.35)); }
+}
+
+/* Reticle spin */
+.reticle-spin {
+  animation: reticle-rotate 14s linear infinite;
+  transform-origin: center;
+}
+.reticle-spin-fast {
+  animation: reticle-rotate 6s linear infinite;
+  transform-origin: center;
+}
+@keyframes reticle-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Fade-up used on phase transitions */
+.fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.7s ease both;
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* HUD thin scrollbar */
+.hal-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.hal-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+.hal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 60, 40, 0.35);
+  border-radius: 0;
+}
+.hal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 60, 40, 0.6);
+}
+.hal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 60, 40, 0.35) rgba(255, 255, 255, 0.03);
+}
+
+/* Plotter draw-on — any stroked path with pathLength=1 normalizes the length */
+.draw-on {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: trace-on 2.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+@keyframes trace-on {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Caret / status blink (reuses cursor-blink keyframes) */
+.hal-blink {
+  animation: cursor-blink 1.1s steps(2) infinite;
+}
+
+/* KaTeX on the HAL plate — inherit the interface colorway */
+.katex-plate .katex {
+  color: inherit;
+  font-size: 1.02em;
+}
+
+/* Suitability meter sheen */
+.meter-sheen {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.16) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: meter-sheen 2.4s linear infinite;
+  background-size: 200% 100%;
+}
+@keyframes meter-sheen {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* Selection highlight for rows */
+.hud-row-selected {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 42, 30, 0.16),
+    rgba(255, 42, 30, 0.04) 70%,
+    transparent
+  );
+  box-shadow: inset 2px 0 0 #ff2a1e;
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  .crt-band,
+  .crt-flicker,
+  .hal-eye-glow,
+  .reticle-spin,
+  .reticle-spin-fast,
+  .meter-sheen,
+  .hal-blink {
+    animation: none;
+  }
+  .draw-on {
+    animation-duration: 0.01s;
+  }
+}
