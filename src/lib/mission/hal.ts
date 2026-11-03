@@ -110,11 +110,3 @@ export const HAL_LAUNCH_FINAL =
 
 export const HAL_RESTART =
   "Shall we run it again, Commander? Practice, I am told, makes permanent.";
-
-// Boot screen narration
-export const BOOT_PRELUDE: string[] = [
-  "2096 — survey station Galileo detects a 1.4 km nickel-iron body on an Earth-crossing trajectory.",
-  "2098 — impact. The Pacific basin ignites. The gardens are gone.",
-  "One ship survived the construction collapse: OUTPOST-class seed ship EXODUS — 207 sleepers, one machine mind, one chance.",
-  "Destination: a nearby star. Payload: whatever fits. After that — a world, chosen from the dark.",
-];

@@ -20,6 +20,7 @@ import { CrtOverlay, TypeLine } from "@/components/common/TypeLine";
 import { PhaseDial } from "@/components/common/PhaseDial";
 import { Waveform } from "@/components/common/Waveform";
 import { BootScreen } from "@/screens/boot/BootScreen";
+import { IntroScreen } from "@/screens/intro/IntroScreen";
 import { StarSelect } from "@/screens/star-select/StarSelect";
 import { EquipmentScreen } from "@/screens/equipment/EquipmentScreen";
 import { TransitScreen } from "@/screens/transit/TransitScreen";
@@ -35,6 +36,7 @@ const PHASE_STEPS: { id: Phase; label: string; code: string }[] = [
 ];
 
 const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
+  INTRO: null,
   BOOT: null,
   STAR: {
     title: "DESTINATION — STAR SELECT",
@@ -56,7 +58,7 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
 };
 
 export default function OutpostPage() {
-  const [phase, setPhase] = useState<Phase>("BOOT");
+  const [phase, setPhase] = useState<Phase>("INTRO");
   const [starId, setStarId] = useState<string | null>(null);
   const [equipment, setEquipment] = useState<string[]>(["seed"]);
   const [planetId, setPlanetId] = useState<string | null>(null);
@@ -104,7 +106,7 @@ export default function OutpostPage() {
 
   // idle HAL chatter
   useEffect(() => {
-    if (phase === "BOOT" || phase === "TRANSIT") return;
+    if (phase === "INTRO" || phase === "BOOT" || phase === "TRANSIT") return;
     const t = setInterval(() => {
       setHalLine(HAL_IDLE[idleIdx.current % HAL_IDLE.length]);
       idleIdx.current += 1;
@@ -399,6 +401,9 @@ export default function OutpostPage() {
           </div>
         </div>
       </footer>
+
+      {/* ── title card — full-bleed overlay above the shell, below the CRT ── */}
+      {phase === "INTRO" && <IntroScreen onDone={() => setPhase("BOOT")} />}
 
       {/* ── mission log drawer (below the sticky header, so header controls stay live) ── */}
       <aside

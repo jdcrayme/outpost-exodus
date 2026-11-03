@@ -433,6 +433,46 @@
   box-shadow: inset 2px 0 0 #e8e6dc;
 }
 
+/* ─── Intro title card — corona bloom + wordmark ───────────────────────────── */
+
+.intro-bloom {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: intro-bloom 2.6s ease-out both;
+}
+@keyframes intro-bloom {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.intro-planet {
+  animation: fade-in 1.4s 0.25s ease both;
+}
+.intro-rim {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: trace-on 2.2s 0.45s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.intro-word {
+  animation: logo-rise 1.2s 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.intro-sub {
+  animation: logo-rise 1s 1.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes logo-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.intro-rule-l,
+.intro-rule-r {
+  animation: rule-draw 0.9s 1.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.intro-rule-l { transform-origin: right center; }
+.intro-rule-r { transform-origin: left center; }
+@keyframes rule-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 /* Reduced motion respect */
 @media (prefers-reduced-motion: reduce) {
   .crt-band,
@@ -445,5 +485,18 @@
   }
   .draw-on {
     animation-duration: 0.01s;
+  }
+  .intro-bloom,
+  .intro-planet,
+  .intro-word,
+  .intro-sub,
+  .intro-rule-l,
+  .intro-rule-r {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+  .intro-rim {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
   }
 }

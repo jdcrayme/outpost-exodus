@@ -47,11 +47,16 @@ starfield auto-rotation ~0.2×. The Discovery's displays drift; they never race.
 
 ## 2. Current state of the mission sequence
 
-`BOOT → STAR → EQUIP → TRANSIT → PLANET → PROFILE` (state machine in
+`INTRO → BOOT → STAR → EQUIP → TRANSIT → PLANET → PROFILE` (state machine in
 `src/app/page.tsx`):
 
-1. **BOOT** — cold-start diagnostics; the 9000's neural pattern stabilizes on a
-   Lissajous scope.
+0. **INTRO** — title card: the 2096–2098 impact prologue (the old boot prelude,
+ relocated) fades in line by line over a drifting starfield; the OUTPOST //
+ EXODUS logo is drawn as vector geometry — planet limb, amber corona bloom,
+ traced rim light. Skippable (button, key, or click).
+1. **BOOT** — cold-start diagnostics: the boot log scrolls in line by line, then
+   rolls up out of the way as the 9000's neural pattern stabilizes on a
+   Lissajous scope and the initiate button appears.
 2. **STAR** — destination select: 16-star catalog, interactive 3D local
    neighborhood (drag to rotate), dossier with transit solution.
 3. **EQUIP** — payload manifest over a **general-arrangement blueprint**
@@ -173,6 +178,7 @@ colony-start risk event drawn from the seed.
 | `src/app/globals.css` | instrument layer: grid-paper, CRT overlay, draw-on, blueprint classes (`bp-*`) |
 | `src/lib/mission/engine.ts` | `mulberry32`, `hashString`, seeded system generation |
 | `src/lib/mission/equipment.ts` | payload catalog + capacities |
+| `src/screens/intro/` | title card — prologue beats, vector logo, drifting starfield; pacing constants at the top of `IntroScreen.tsx` |
 | `src/screens/equipment/ShipBlueprint.tsx` | GA drawing + MOUNTS table + `useTickNumber` |
 | `src/components/common/` | shared instrument widgets (HudPanel bank, Lissajous, PlanetScan, TypeLine); one folder per screen under `src/screens/` |
 
