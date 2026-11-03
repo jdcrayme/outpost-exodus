@@ -53,9 +53,12 @@ then `vercel --prod` when you're happy with the preview.
 
 The app is a single state machine, owned by `src/app/page.tsx`:
 
-`BOOT → STAR → EQUIP → TRANSIT → PLANET → PROFILE`
+`INTRO → BOOT → STAR → EQUIP → TRANSIT → PLANET → PROFILE`
 
-1. **BOOT** — cold-start diagnostics; the 9000's neural pattern stabilizes on a scope
+0. **INTRO** — title card: the 2096–2098 impact prologue fades in over a drifting
+   starfield, then the OUTPOST // EXODUS logo blooms in — skippable
+1. **BOOT** — cold-start diagnostics: the boot log scrolls in, then rolls up as the
+   9000's neural pattern stabilizes on a scope and the initiate button appears
 2. **STAR** — destination star select from the catalog
 3. **EQUIP** — seed-ship payload manifest with mass/power budget
 4. **TRANSIT** — transit plot: conic transfer arc, Kepler-solved ship marker, live
@@ -69,6 +72,8 @@ The app is a single state machine, owned by `src/app/page.tsx`:
 src/
   app/                  # layout.tsx, page.tsx — page.tsx owns the mission state machine
   screens/              # one folder per phase screen, private widgets colocated:
+                        #   intro/           — title card: impact prologue + vector
+                        #                     logo + drifting starfield (skippable)
                         #   boot/           — cold-start diagnostics
                         #   star-select/    — StarSelect + Starfield3D (3D local neighborhood)
                         #   equipment/      — EquipmentScreen + ShipBlueprint
