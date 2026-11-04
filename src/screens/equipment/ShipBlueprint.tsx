@@ -388,7 +388,7 @@ export function ShipBlueprint({
     statusRight = (
       <span>
         COHORT {String(bay.cohort).padStart(2, "0")} ·{" "}
-        <span className="text-phos">{BERTHS_PER_BAY} SOULS</span> · CRYO{" "}
+        <span className="text-phos">{BERTHS_PER_BAY} SOULS</span> · TORPOR{" "}
         {bay.loopK.toFixed(1)} K · BUS {bay.bus}
       </span>
     );
@@ -451,7 +451,7 @@ export function ShipBlueprint({
           viewBox="0 12 250 88"
           className="h-full w-full"
           role="img"
-          aria-label={`General arrangement drawing of the seed ship Exodus, ${OVERALL_M} metres overall: Whipple debris shield forward, cargo ring, twelve distributed cold-sleep bays inside the debris shadow, deployable radiators, aft fuel tanks and fusion drive, with docked payload modules`}
+          aria-label={`General arrangement drawing of the seed ship Exodus, ${OVERALL_M} metres overall: Whipple debris shield forward, magsail drum, cargo ring, twelve distributed cold-sleep bays inside the debris shadow, deployable droplet-curtain radiators, aft fuel tanks and fusion drive, with docked payload modules`}
           preserveAspectRatio="xMidYMid meet"
         >
           {/* ── debris shadow cone (under everything) ── */}
@@ -652,15 +652,20 @@ export function ShipBlueprint({
             )}
           </g>
 
-          {/* ── deployable radiators — 2×2 wing on hinge masts ── */}
+          {/* ── deployable radiators — droplet curtains, shown broken ── */}
+          {/* 1,900 m × 4,500 m wetted curtains; 34 km² at 1,450 K rejects the
+              torch's ~1% waste heat. True length won't fit on the drawing —
+              standard drafting break, honestly labelled. */}
           <g>
             <path className="bp-ink-faint" d="M165.5,45.8 h2 M165.5,50.2 h2" />
+            {/* ventral curtains draw shorter — full reach would crowd the aft
+                drop-stages on the sheet; the break says true length anyway */}
             {[
-              { y: SPINE_TOP, a: -18 },
-              { y: SPINE_TOP, a: -38 },
-              { y: SPINE_BOT, a: 18 },
-              { y: SPINE_BOT, a: 38 },
-            ].map(({ y, a }) => (
+              { y: SPINE_TOP, a: -30, len: 19 },
+              { y: SPINE_TOP, a: -50, len: 19 },
+              { y: SPINE_BOT, a: 30, len: 15.6 },
+              { y: SPINE_BOT, a: 50, len: 15.6 },
+            ].map(({ y, a, len }) => (
               <g key={`${y}-${a}`} transform={`translate(168,${y}) rotate(${a})`}>
                 <circle className="bp-ink-dim" cx={0} cy={0} r={0.65} />
                 <rect
@@ -668,14 +673,19 @@ export function ShipBlueprint({
                   className="bp-ink bp-draw"
                   x={1.4}
                   y={-2.6}
-                  width={19}
+                  width={len - 2.6}
                   height={5.2}
                   style={{ fill: "rgba(214,162,106,0.06)" }}
                 />
-                {[4, 6.4, 8.8, 11.2, 13.6, 16, 18.4].map((x) => (
+                {Array.from({ length: 6 }, (_, k) => 2.8 + k * ((len - 4.2) / 5)).map((x) => (
                   <path key={x} className="bp-ink-faint" d={`M${x},-2.6 v5.2`} />
                 ))}
-                <circle cx={21} cy={0} r={0.35} fill="rgba(251,191,36,0.85)" />
+                {/* break marks — the curtain continues off-drawing */}
+                <path
+                  className="bp-ink-dim"
+                  d={`M${len - 0.8},-2.6 l1.2,5.2 M${len + 1.2},-2.6 l1.2,5.2`}
+                />
+                <circle cx={len} cy={0} r={0.35} fill="rgba(251,191,36,0.85)" />
               </g>
             ))}
           </g>
@@ -721,6 +731,24 @@ export function ShipBlueprint({
             <path className="bp-ink" d="M219.8,46.9 h8 l2.2,3 h-12.4 Z" />
             <path className="bp-ink-dim" d="M219.8,52.2 h6.4 l2.1,-2.6 h-10.6 Z" />
             <circle className="bp-phos" cx={217.3} cy={48} r={0.35} />
+          </g>
+
+          {/* ── magsail drum — 1,900 km of superconducting cable, stowed ── */}
+          <g>
+            <rect
+              pathLength={1}
+              className="bp-ink bp-draw"
+              x={22}
+              y={46.4}
+              width={9}
+              height={3.2}
+              rx={1.4}
+              style={{ fill: "rgba(123,235,166,0.04)" }}
+            />
+            <g className="bp-detail">
+              <path className="bp-ink-faint" d="M23.5,46.4 v3.2 M26.5,46.4 v3.2 M29.5,46.4 v3.2" />
+            </g>
+            <circle className="bp-phos" cx={31.6} cy={48} r={0.3} />
           </g>
 
           {/* ── station ruler — diamonds for docks, circles for bays ── */}
@@ -815,9 +843,9 @@ export function ShipBlueprint({
               COLD-SLEEP BAYS — 1 COHORT (17) PER BAY
             </text>
             {/* radiators */}
-            <path className="bp-ink-faint" d="M177,30.4 L179.5,33.5" />
-            <text className="bp-txt" x={176} y={29.6}>
-              DEPLOYABLE RADIATORS ×4 — RETRACT FOR BURN
+            <path className="bp-ink-faint" d="M176,25.6 L180,29.4" />
+            <text className="bp-txt" x={150} y={24}>
+              THERMAL REJECTION — 34 KM² (SHOWN BROKEN)
             </text>
             {/* fuel */}
             <path className="bp-ink-faint" d="M200,62.4 V65.9" />
@@ -907,7 +935,12 @@ export function ShipBlueprint({
             </text>
             {/* radiator temperature */}
             <text className="bp-stamp-dim" x={176.5} y={38.4}>
-              710 K
+              ×4 · 1,450 K · DROPLET
+            </text>
+            {/* magsail drum */}
+            <path className="bp-ink-faint" d="M26.5,46.2 V43.6" />
+            <text className="bp-stamp-dim" x={26.5} y={42.9} textAnchor="middle">
+              MAGSAIL — 1,900 KM LOOP
             </text>
             {/* fuel labels */}
             <text className="bp-stamp-dim" x={200} y={32.4} textAnchor="end">
@@ -948,7 +981,7 @@ export function ShipBlueprint({
               GENERAL ARRANGEMENT — PAYLOAD CONFIG
             </text>
             <text className="bp-txt-dim" x={8.5} y={94.8}>
-              DWG OE-104-GA · REV E · SCHEMATIC
+              DWG OE-104-GA · REV F · SCHEMATIC
             </text>
             <text className="bp-txt-dim" x={80.5} y={83.6}>
               MASS

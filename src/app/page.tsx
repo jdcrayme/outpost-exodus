@@ -7,6 +7,7 @@ import { STAR_BY_ID } from "@/lib/mission/stars";
 import { EQUIPMENT_BY_ID } from "@/lib/mission/equipment";
 import { generateSystem, formatClock } from "@/lib/mission/engine";
 import { transitYears } from "@/lib/mission/stars";
+import { TRANSFER, BURN_YEARS } from "@/lib/mission/astro";
 import { halcyonAudio } from "@/lib/mission/audio";
 import {
   HALCYON_EQUIP_OPEN,
@@ -47,7 +48,7 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
   },
   EQUIP: {
     title: "SHIP EQUIPMENT — PAYLOAD MANIFEST",
-    sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,075-tonne catalog.",
+    sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,160-tonne catalog.",
   },
   CREW: {
     title: "CREW MANIFEST — COLD-SLEEP ROSTER",
@@ -148,7 +149,7 @@ export default function OutpostPage() {
     setHalLine(HALCYON_EQUIP_OPEN);
     addLog(`DESTINATION COMMITTED — ${s.name} (${s.distanceLy.toFixed(2)} LY)`);
     addLog(
-      `TRANSIT SOLUTION — ${Math.round(transitYears(s))} YEARS (TJI + JOVIAN FLYBY + 0.1 C CRUISE)`
+      `TRANSIT SOLUTION — ${Math.round(transitYears(s))} YEARS (TJI + FLYBY + TORCH + CRUISE + MAGSAIL BRAKE + CAPTURE)`
     );
     addLog(halcyonStarCommitted(s));
   };
@@ -164,7 +165,7 @@ export default function OutpostPage() {
     addLog(
       `PAYLOAD CONFIRMED — ${equipmentItems.length} ITEMS / ${equipmentItems.reduce((a, e) => a + e.massT, 0)} T`
     );
-    addLog("DEPARTURE PROFILE — TJI BURN 8.80 KM/S · JOVIAN ASSIST δ 115.8° · C3 ESCAPE 0.100 C");
+    addLog(`DEPARTURE PROFILE — TJI Δv ${TRANSFER.dvTjiKms.toFixed(2)} KM/S · JOVIAN δ ${TRANSFER.deltaDeg.toFixed(1)}° · TORCH ${BURN_YEARS.toFixed(1)} YR → 0.100 C`);
     addLog(HALCYON_PAYLOAD_OK);
     setHalLine(HALCYON_CREW_OPEN);
   };
@@ -370,6 +371,7 @@ export default function OutpostPage() {
             planets={planets}
             hasProbe={hasProbe}
             payloadMassT={equipmentItems.reduce((a, e) => a + e.massT, 0)}
+            equipment={equipment}
             onDone={finishTransit}
             onSpeak={speak}
           />

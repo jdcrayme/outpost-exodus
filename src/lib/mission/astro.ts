@@ -27,6 +27,17 @@ export const CRUISE_C = 0.1;
 export const CRUISE_KMS = CRUISE_C * C_KMS; // 29,979 km/s
 export const BURN_DIST_AU = 0.52; // fusion ignition distance past Jupiter
 
+// ── Torch burn (REV F): sustained, not impulsive ──
+// A 0.1 c Δv in eighteen days would demand ~2 GN of thrust and ~34 PW of jet
+// power — radiators of ~1,200 km². Stretched to two years (Daedalus-class
+// staging) the jet power is ~0.9 TW and thermal rejection is ~34 km² of
+// 1,450 K droplet curtain — still the dominant feature of the ship, which is
+// the honest answer. The multi-year burn is also why there is no perihelion
+// Oberth "Sundiver" dive instead: Oberth multiplies impulsive burns, and does
+// nothing for a two-year torch. The Jovian flyby keeps its real job — bending
+// the escape asymptote toward a high-declination target.
+export const BURN_YEARS = 2.0;
+
 /** Perihelion of the TJI ellipse on the departure plate (math convention). */
 export const DEPART_ANGLE_DEG = 155;
 
@@ -149,7 +160,13 @@ export function transferSpeedKms(theta: number): number {
 
 // ── Piecewise mission state — one function of mission time ───────────────────
 
-export type MissionPhase = "TJI" | "FLYBY" | "BURN" | "CRUISE";
+export type MissionPhase =
+  | "TJI"
+  | "FLYBY"
+  | "BURN"
+  | "CRUISE"
+  | "MAGSAIL"
+  | "CAPTURE";
 
 export interface MissionState {
   phase: MissionPhase;
@@ -157,65 +174,241 @@ export interface MissionState {
   velKms: number; // heliocentric speed
   remainingLy: number; // range to destination
   propPct: number; // fusion stockpile remaining
+  beta: number; // v/c — for the relativistic plate
 }
 
-const T_BLEND = 0.05; // years of screen-time smoothing across flyby + burn
-
-/** Total mission duration: departure leg + flyby/burn blend + 0.1 c cruise. */
-export function totalYears(distanceLy: number): number {
-  return TRANSFER.years + T_BLEND + distanceLy / CRUISE_C;
-}
-
+// Torch-burn velocity profile, p ∈ [0,1] across BURN_YEARS: the flyby ramp to
+// the post-assist exit speed, then the long climb to cruise. Same shape the
+// old 18-day blend had — the ramp physics did not change, only its duration.
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
+const FLYBY_FRAC = 0.05; // of the burn window; the flyby itself is ~18 days
+function burnSpeedKms(p: number): number {
+  const q = Math.min(1, Math.max(0, p));
+  if (q < FLYBY_FRAC) {
+    const s = smooth(q / FLYBY_FRAC);
+    return TRANSFER.vAphiKms + (TRANSFER.exitSpeedKms - TRANSFER.vAphiKms) * s;
+  }
+  const s = smooth((q - FLYBY_FRAC) / (1 - FLYBY_FRAC));
+  return TRANSFER.exitSpeedKms + (CRUISE_KMS - TRANSFER.exitSpeedKms) * s;
+}
+
+// Integrated once at module load: distance, proper time and erosion dose
+// across the burn. Star-independent — the profile depends only on Jupiter.
+const BURN_PROFILE = (() => {
+  const N = 2048;
+  const cumKm = new Float64Array(N + 1);
+  const cumTau = new Float64Array(N + 1); // proper time, yr
+  const cumDose = new Float64Array(N + 1); // erosion dose, v³-weighted yr
+  const dtYr = BURN_YEARS / N;
+  for (let i = 1; i <= N; i++) {
+    const v = burnSpeedKms((i - 0.5) / N);
+    cumKm[i] = cumKm[i - 1] + v * dtYr * SEC_PER_YEAR;
+    cumTau[i] = cumTau[i - 1] + dtYr * Math.sqrt(1 - (v / C_KMS) ** 2);
+    cumDose[i] = cumDose[i - 1] + dtYr * (v / CRUISE_KMS) ** 3;
+  }
+  return { N, cumKm, cumTau, cumDose, totalKm: cumKm[N], totalTau: cumTau[N] };
+})();
+
+export const BURN_DISTANCE_LY = BURN_PROFILE.totalKm / LY_KM; // ≈ 0.06 ly
+export const BURN_END_RANGE_AU = JUPITER_ORBIT_AU + BURN_PROFILE.totalKm / AU_KM;
+
+// ── Magnetic sail — how a 0.1 c ship stops (Zubrin & Andrews) ────────────────
+// Drag against the ISM is propellantless: a = a₀(v/v₀)², so v(t) = v₀/(1+t/τ′)
+// with τ′ = v₀/a₀. Sketch-level constants: a₀ = 0.25 m/s² at 0.1 c wants a
+// ~1,900 km superconducting loop on our 62 kt burnout mass in local-cloud
+// densities (~0.3/cm³, magnetic-interaction cross-section of a few loop
+// radii). The sail brakes 0.1 c → 4,000 km/s; the 12.4% fusion reserve then
+// finishes the capture burn with ~44% margin. Braking the last factor of ten
+// in speed would take another century — this is the honest architecture, not
+// a convenient one.
+export const MAG_A0_MS2 = 0.25;
+export const MAG_TAU_YR = (CRUISE_KMS * 1000) / (MAG_A0_MS2 * SEC_PER_YEAR); // ≈ 3.80 yr
+export const MAG_V_ARR_KMS = 4_000;
+export const MAG_RATIO = CRUISE_KMS / MAG_V_ARR_KMS; // ≈ 7.49
+export const MAG_DEPLOY_LY = CRUISE_C * MAG_TAU_YR * Math.log(MAG_RATIO); // ≈ 0.77 ly out
+export const MAG_YEARS = MAG_TAU_YR * (MAG_RATIO - 1); // ≈ 24.7 yr
+export const CAPTURE_YEARS = 0.3; // propulsive trim into a bound orbit
+export const CAPTURE_V_KMS = 40; // post-capture: interplanetary-class speed
+
+// Magsail proper-time profile (fixed shape — constants only, no star)
+const MAG_PROFILE = (() => {
+  const N = 2048;
+  const cumTau = new Float64Array(N + 1);
+  const dtYr = MAG_YEARS / N;
+  for (let i = 1; i <= N; i++) {
+    const u = 1 + ((i - 0.5) / N) * (MAG_YEARS / MAG_TAU_YR);
+    const v = CRUISE_KMS / u;
+    cumTau[i] = cumTau[i - 1] + dtYr * Math.sqrt(1 - (v / C_KMS) ** 2);
+  }
+  return { N, cumTau, totalTau: cumTau[N] };
+})();
+
+/** Phase boundary times (yr since the TJI burn) for a destination `distanceLy` away. */
+export function phaseBoundaries(distanceLy: number) {
+  const tJup = TRANSFER.years;
+  const tBurnEnd = tJup + BURN_YEARS;
+  const cruiseLy = Math.max(0, distanceLy - BURN_DISTANCE_LY - MAG_DEPLOY_LY);
+  const tCruiseEnd = tBurnEnd + cruiseLy / CRUISE_C;
+  const tMagEnd = tCruiseEnd + MAG_YEARS;
+  return {
+    tJup,
+    tBurnEnd,
+    tCruiseEnd,
+    tMagEnd,
+    tTotal: tMagEnd + CAPTURE_YEARS,
+  };
+}
+
+/** Total mission duration: TJI + flyby/torch + cruise + magsail brake + capture. */
+export function totalYears(distanceLy: number): number {
+  return phaseBoundaries(distanceLy).tTotal;
+}
 
 /**
  * State of the ship at mission time `t` years since the TJI burn.
- * Phases: transfer ellipse → Jupiter flyby + fusion burn → 0.1 c cruise.
+ * Phases: transfer ellipse → Jupiter flyby + 2 yr torch → 0.1 c cruise →
+ * magsail brake → propulsive capture.
  */
 export function missionState(
   distanceLy: number,
   t: number
 ): MissionState {
-  const tXfer = TRANSFER.years;
-  if (t < tXfer) {
+  const { tJup, tBurnEnd, tCruiseEnd, tMagEnd } = phaseBoundaries(distanceLy);
+  if (t < tJup) {
     // Transfer ellipse coast — decelerating climb out of Sol's well
-    const theta = Math.PI * clamp01(t / tXfer);
+    const theta = Math.PI * clamp01(t / tJup);
+    const v = transferSpeedKms(theta);
     return {
       phase: "TJI",
       rangeAu: transferRangeAu(theta),
-      velKms: transferSpeedKms(theta),
+      velKms: v,
       remainingLy: distanceLy,
       propPct: 100,
+      beta: v / C_KMS,
     };
   }
-  if (t < tXfer + T_BLEND) {
-    // Flyby + fusion burn: 7.4 → 16.3 → 29,979 km/s, smoothed for display
-    const p = smooth(clamp01((t - tXfer) / T_BLEND));
-    const speed =
-      p < 0.4
-        ? TRANSFER.vAphiKms +
-          (TRANSFER.exitSpeedKms - TRANSFER.vAphiKms) * smooth(p / 0.4)
-        : TRANSFER.exitSpeedKms +
-          (CRUISE_KMS - TRANSFER.exitSpeedKms) * smooth((p - 0.4) / 0.6);
+  if (t < tBurnEnd) {
+    // Jupiter flyby folding into the two-year torch burn
+    const p = (t - tJup) / BURN_YEARS;
+    const i = Math.min(BURN_PROFILE.N, Math.round(p * BURN_PROFILE.N));
+    const v = burnSpeedKms(p);
     return {
-      phase: p < 0.4 ? "FLYBY" : "BURN",
-      rangeAu: JUPITER_ORBIT_AU + BURN_DIST_AU * p,
-      velKms: speed,
-      remainingLy: distanceLy,
+      phase: p < FLYBY_FRAC ? "FLYBY" : "BURN",
+      rangeAu: JUPITER_ORBIT_AU + BURN_PROFILE.cumKm[i] / AU_KM,
+      velKms: v,
+      remainingLy: Math.max(0, distanceLy - BURN_PROFILE.cumKm[i] / LY_KM),
       propPct: 100 - 87.6 * p,
+      beta: v / C_KMS,
     };
   }
-  // Cruise at 0.100 c — the long silence
-  const tc = t - tXfer - T_BLEND;
-  const travelledLy = CRUISE_C * tc;
+  if (t < tCruiseEnd) {
+    // Cruise at 0.100 c — the long silence
+    const tc = t - tBurnEnd;
+    const travelledLy = BURN_DISTANCE_LY + CRUISE_C * tc;
+    return {
+      phase: "CRUISE",
+      rangeAu: BURN_END_RANGE_AU + CRUISE_C * LY_AU * tc,
+      velKms: CRUISE_KMS,
+      remainingLy: Math.max(0, distanceLy - travelledLy),
+      propPct: 12.4,
+      beta: CRUISE_C,
+    };
+  }
+  if (t < tMagEnd) {
+    // Magsail brake — leaning on the interstellar medium itself
+    const tm = t - tCruiseEnd;
+    const u = 1 + tm / MAG_TAU_YR;
+    const travelledLy = CRUISE_C * MAG_TAU_YR * Math.log(u);
+    const v = CRUISE_KMS / u;
+    const rangeAu =
+      BURN_END_RANGE_AU +
+      CRUISE_C * LY_AU * (tCruiseEnd - tBurnEnd) +
+      travelledLy * LY_AU;
+    return {
+      phase: "MAGSAIL",
+      rangeAu,
+      velKms: v,
+      remainingLy: Math.max(0, MAG_DEPLOY_LY - travelledLy),
+      propPct: 12.4,
+      beta: v / C_KMS,
+    };
+  }
+  // Capture burn — the reserve spends itself to bind us to the star
+  const p = clamp01((t - tMagEnd) / CAPTURE_YEARS);
+  const v = MAG_V_ARR_KMS + (CAPTURE_V_KMS - MAG_V_ARR_KMS) * smooth(p);
+  const rangeSoFar =
+    BURN_END_RANGE_AU +
+    CRUISE_C * LY_AU * (tCruiseEnd - tBurnEnd) +
+    MAG_DEPLOY_LY * LY_AU;
   return {
-    phase: "CRUISE",
-    rangeAu: JUPITER_ORBIT_AU + BURN_DIST_AU + CRUISE_C * LY_AU * tc,
-    velKms: CRUISE_KMS,
-    remainingLy: Math.max(0, distanceLy - travelledLy),
-    propPct: 12.4,
+    phase: "CAPTURE",
+    rangeAu: rangeSoFar,
+    velKms: v,
+    remainingLy: 0,
+    propPct: 12.4 - 6.9 * p,
+    beta: v / C_KMS,
   };
+}
+
+// ── Relativistic plate @ 0.1 c ──────────────────────────────────────────────
+
+/** Ship-board elapsed time τ(t) = ∫dt/γ — the time the crew experiences. */
+export function properTimeYears(distanceLy: number, t: number): number {
+  const { tJup, tBurnEnd, tCruiseEnd, tMagEnd } = phaseBoundaries(distanceLy);
+  if (t <= tJup) return t; // v ≤ 36 km/s: γ−1 ≤ 7×10⁻¹², beneath the dial
+  if (t <= tBurnEnd) {
+    const i = Math.min(
+      BURN_PROFILE.N,
+      Math.round(((t - tJup) / BURN_YEARS) * BURN_PROFILE.N)
+    );
+    return tJup + BURN_PROFILE.cumTau[i];
+  }
+  const tauBurnEnd = tJup + BURN_PROFILE.totalTau;
+  if (t <= tCruiseEnd) {
+    return tauBurnEnd + (t - tBurnEnd) * Math.sqrt(1 - CRUISE_C ** 2);
+  }
+  const tauCruiseEnd =
+    tauBurnEnd + (tCruiseEnd - tBurnEnd) * Math.sqrt(1 - CRUISE_C ** 2);
+  if (t <= tMagEnd) {
+    const i = Math.min(
+      MAG_PROFILE.N,
+      Math.round(((t - tCruiseEnd) / MAG_YEARS) * MAG_PROFILE.N)
+    );
+    return tauCruiseEnd + MAG_PROFILE.cumTau[i];
+  }
+  return tauCruiseEnd + MAG_PROFILE.totalTau + (t - tMagEnd); // capture: γ≈1
+}
+
+/** Earth's 8.4 GHz archive beacon, Doppler-shifted by our receding velocity. */
+export function solBeaconRxGhz(velKms: number): number {
+  const beta = Math.min(0.9, Math.max(0, velKms / C_KMS));
+  return 8.4 * Math.sqrt((1 - beta) / (1 + beta));
+}
+
+// ── Whipple-stack erosion ─────────────────────────────────────────────────────
+// Kinetic flux ∝ v³. Dose calibrated so the stack loses roughly half its
+// margin over ~two centuries at 0.1 c (Daedalus beryllium-shield estimates).
+export const SHIELD_TAU_YR = 300;
+
+/** Remaining Whipple-shield margin at mission time t, percent. */
+export function shieldMarginPct(distanceLy: number, t: number): number {
+  const { tJup, tBurnEnd, tCruiseEnd, tMagEnd } = phaseBoundaries(distanceLy);
+  let dose = 0;
+  if (t > tJup) {
+    const i = Math.min(
+      BURN_PROFILE.N,
+      Math.round(Math.min(1, (t - tJup) / BURN_YEARS) * BURN_PROFILE.N)
+    );
+    dose += BURN_PROFILE.cumDose[i];
+  }
+  if (t > tBurnEnd) dose += Math.min(t, tCruiseEnd) - tBurnEnd;
+  if (t > tCruiseEnd) {
+    // ∫(1+tm/τ′)⁻³ dtm = (τ′/2)(1 − 1/(1+T/τ′)²)
+    const tm = Math.min(t, tMagEnd) - tCruiseEnd;
+    dose += (MAG_TAU_YR / 2) * (1 - 1 / (1 + tm / MAG_TAU_YR) ** 2);
+  }
+  return 100 * Math.exp(-dose / SHIELD_TAU_YR);
 }
 
 // ── Display math for the equation plate ──────────────────────────────────────
@@ -235,6 +428,13 @@ export function fmtLightTime(rangeAu: number): string {
   const days = s / 86_400;
   if (days < 200) return `${days.toFixed(1)} DAYS`;
   return `${(days / 365.25).toFixed(2)} YRS`;
+}
+
+/** Heliocentric range with sane significant digits (AU, then light-years). */
+export function fmtRange(rangeAu: number): string {
+  if (rangeAu < 100) return `${rangeAu.toFixed(2)} AU`;
+  if (rangeAu < LY_AU) return `${Math.round(rangeAu).toLocaleString("en-US")} AU`;
+  return `${(rangeAu / LY_AU).toFixed(3)} LY`;
 }
 
 /** Heliocentric range with sane significant digits. */

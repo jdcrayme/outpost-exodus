@@ -1,9 +1,11 @@
 import type { EquipmentCategory, EquipmentItem } from "./types";
 
 // ─── SEED SHIP EXODUS — payload manifest ────────────────────────────────────
-// Total manifest 2,075 t against 1,760 t launch capacity: every configuration
+// Total manifest 2,160 t against 1,760 t launch capacity: every configuration
 // is a sacrifice. The SEED lander is non-negotiable; the VLBI probe is the
 // classic gamble (skip it and you pick your world blind — as in Outpost, 1994).
+// Nothing survives a sixty-year transit unattended — the shipshop exists
+// because spares mass is dead mass and feedstock is alive.
 
 export const CARGO_CAPACITY_T = 1760;
 
@@ -18,7 +20,7 @@ export const EQUIPMENT: EquipmentItem[] = [
     powerKw: 1.2,
     reliability: 96,
     role: "Planetary survey telemetry",
-    desc: "Very-long-baseline interferometry array on a fast courier stage. Runs ahead of the ship, arrives decades early, and resolves every planet in the target system to survey grade. The only source of surface telemetry before landing.",
+    desc: "Very-long-baseline interferometry array on a fast courier stage — its own torch, 0.135 c, arriving decades ahead of us. It burns its sail and a sacrificial aeroshell into a wide orbit, then spends years grinding every planet of the system down to survey grade. The only source of surface telemetry before landfall.",
     effects: { science: 15, survey: true },
   },
   {
@@ -176,21 +178,33 @@ export const EQUIPMENT: EquipmentItem[] = [
     massT: 55,
     powerKw: 6,
     reliability: 97,
-    role: "Surgery / cryo-revival",
-    desc: "Autosurgery, 207 cold-sleep revival bays and a pharmaceutical printer. Waking 207 people after decades is a medical procedure, not an alarm clock.",
+    role: "Surgery / torpor-revival",
+    desc: "Autosurgery, 207 torpor-revival bays and a pharmaceutical printer. Waking 207 people after decades of hypothermia is a medical procedure, not an alarm clock — each thaw is scheduled, medicated and rehearsed.",
     effects: { life: 8, habitat: 4 },
   },
   {
     id: "coldsleep",
-    name: "COLD-SLEEP RESERVE BATTERY",
+    name: "TORPOR BAY RESERVE BATTERY",
     code: "CRY-RSV-03",
     category: "SUPPORT SYSTEMS",
     massT: 220,
     powerKw: 7,
     reliability: 96,
-    role: "Per-bay cryo redundancy",
-    desc: "Independent battery, cryo loop and power bus fitted to each of the twelve bays. If a bay's primary bus fails in year 80 of a 119-year transit, this is the reason there is still a bay — and a cohort — in year 81.",
+    role: "Per-bay torpor redundancy",
+    desc: "Independent battery, thermal loop and power bus fitted to each of the twelve bays. If a bay's primary bus fails in the fifth decade of transit, this is the reason there is still a bay — and a cohort — in the sixth.",
     effects: { life: 12 },
+  },
+  {
+    id: "shipshop",
+    name: "SHIPBOARD REMANUFACTURING SHOP",
+    code: "IND-RMS-04",
+    category: "SUPPORT SYSTEMS",
+    massT: 85,
+    powerKw: 900,
+    reliability: 94,
+    role: "In-transit repair & remanufacture",
+    desc: "Machine line, metal printer and a feedstock bill that replaces the spares locker. On a sixty-year transit nothing stays whole: radiator curtains rupture, bus capacitors drift, cargo cells take strikes. Doctrine is repair by remanufacture — spares are dead mass, feedstock is alive.",
+    effects: { repair: 12 },
   },
 ];
 

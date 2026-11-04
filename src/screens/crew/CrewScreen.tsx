@@ -124,7 +124,7 @@ export function CrewScreen({
       <span>
         COHORT {String(b.cohort).padStart(2, "0")} ·{" "}
         <span className="text-phos">{BERTHS_PER_BAY} SOULS</span> · BUS {b.bus}{" "}
-        · CRYO {b.loopK.toFixed(1)} K
+        · TORPOR {b.loopK.toFixed(1)} K (+{(b.loopK - 273.15).toFixed(1)} °C)
       </span>
     );
   } else {
@@ -265,7 +265,7 @@ export function CrewScreen({
                   </span>
                   <span>{bay.clock}</span>
                   <span>
-                    CRYO{" "}
+                    TORPOR{" "}
                     <span className="text-neutral-300">
                       {bay.loopK.toFixed(1)}
                     </span>{" "}

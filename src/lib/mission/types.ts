@@ -10,6 +10,9 @@ export interface StarSystem {
   distanceLy: number;
   ra: number; // hours
   dec: number; // degrees
+  /** Proper motion, mas/yr — Gaia DR3 / Hipparcos, rounded. */
+  pmRaMasYr: number;
+  pmDecMasYr: number;
   spectral: string;
   massSolar: number;
   luminositySolar: number;
@@ -52,6 +55,9 @@ export interface Planet {
   moons: number;
   inHabitableZone: boolean;
   tidalLock: boolean;
+  /** Free O₂ detected, but M-dwarf water loss could be responsible — the
+   *  biotic/abiotic question is open (Luger & Barnes 2015). */
+  abioticRisk?: boolean;
   notes: string;
   color: string;
   suitability: number; // 0–100
@@ -69,6 +75,8 @@ export interface EquipmentEffects {
   habitat?: number;
   life?: number;
   survey?: boolean;
+  /** In-transit maintenance / remanufacture capability. */
+  repair?: number;
 }
 
 export interface EquipmentItem {

@@ -10,17 +10,27 @@ import {
   DEPART_ANGLE_DEG,
   JUPITER_ORBIT_AU,
   BURN_DIST_AU,
+  BURN_YEARS,
   CRUISE_C,
+  CRUISE_KMS,
   SHIP_DRY_T,
   PROP_T,
   CREW_COUNT,
+  MAG_DEPLOY_LY,
+  MAG_YEARS,
+  MAG_V_ARR_KMS,
   missionState,
+  properTimeYears,
+  solBeaconRxGhz,
+  shieldMarginPct,
+  totalYears,
   fmtLightTime,
-  fmtAu,
+  fmtRange,
   fmtKms,
   kineticEnergyJ,
   transferRangeAu,
 } from "@/lib/mission/astro";
+import { interceptSolution } from "@/lib/mission/stars";
 
 // ─── Transit plot — Discovery-style departure plate ──────────────────────────
 // Three panels: an SVG trajectory plate (draw-on plotter animation, flyby
@@ -300,7 +310,7 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
             FUSION IGNITION
           </text>
           <text x={VB_W - 8} y={geo.ignition[1] + 27} textAnchor="end" className="hal-mono" fontSize="7.5" fill="#737373">
-            +{BURN_DIST_AU} AU · 43 MIN BURN
+            +{BURN_DIST_AU} AU · SUSTAINED {BURN_YEARS.toFixed(1)} YR
           </text>
         </g>
 
@@ -405,10 +415,18 @@ const EquationPlate = memo(function EquationPlate({
 }) {
   const rows = useMemo(() => {
     const d = star.distanceLy;
-    const tCruise = d / CRUISE_C;
+    const tTotal = totalYears(d);
+    const tCruise = (d - 0.06 - MAG_DEPLOY_LY) / CRUISE_C;
     const ek = kineticEnergyJ(payloadMassT);
     const exp = Math.floor(Math.log10(ek));
     const man = ek / 10 ** exp;
+    // torch rocket equation, from the real masses
+    const m0 = SHIP_DRY_T + PROP_T + payloadMassT;
+    const mf = SHIP_DRY_T + payloadMassT + 0.124 * PROP_T;
+    const ve = (CRUISE_KMS - TRANSFER.exitSpeedKms) / Math.log(m0 / mf);
+    const dv = ve * Math.log(m0 / mf);
+    const tau = properTimeYears(d, tTotal);
+    const dTau = tTotal - tau;
     const tex = (s: string) =>
       katex.renderToString(s, { throwOnError: false, displayMode: false });
     return [
@@ -425,14 +443,28 @@ const EquationPlate = memo(function EquationPlate({
         ),
       },
       {
-        label: `CRUISE — ${star.name}`,
+        label: `TORCH — ${BURN_YEARS.toFixed(1)} YR SUSTAINED BURN`,
         html: tex(
-          `t=\\tfrac{d}{v_\\infty}=\\tfrac{${d.toFixed(3)}\\;\\mathrm{ly}}{0.100\\,c}=${tCruise.toFixed(1)}\\;\\mathrm{yr}`
+          `\\Delta v=v_e\\ln\\!\\tfrac{m_0}{m_f}=${Math.round(ve).toLocaleString()}\\;\\mathrm{km/s}\\cdot\\ln\\!\\tfrac{${m0.toLocaleString()}}{${Math.round(mf).toLocaleString()}}=${Math.round(dv).toLocaleString()}\\;\\mathrm{km/s}`
         ),
       },
       {
-        label: "SIGNAL LAG — ONE WAY",
-        html: tex(`\\tau=\\tfrac{d}{c}=${d.toFixed(2)}\\;\\mathrm{yr}`),
+        label: `CRUISE — ${star.name}`,
+        html: tex(
+          `t=\\tfrac{d-d_{\\mathrm{brake}}}{0.100\\,c}\\approx${tCruise.toFixed(1)}\\;\\mathrm{yr}`
+        ),
+      },
+      {
+        label: "MAGSAIL BRAKE — RAM DRAG",
+        html: tex(
+          `v(t)=\\tfrac{v_0}{1+t/\\tau'}\\;\\Rightarrow\\;${Math.round(CRUISE_KMS).toLocaleString()}\\to${MAG_V_ARR_KMS.toLocaleString()}\\;\\mathrm{km/s}\\;\\mathrm{over}\\;${MAG_YEARS.toFixed(1)}\\;\\mathrm{yr}`
+        ),
+      },
+      {
+        label: "SHIP PROPER TIME @ γ = 1.005",
+        html: tex(
+          `\\tau=\\int\\!\\mathrm{d}t/\\gamma=${tau.toFixed(1)}\\;\\mathrm{yr}\\;(-${dTau.toFixed(2)}\\;\\mathrm{yr})`
+        ),
       },
       {
         label: "KINETIC ENERGY AT CRUISE",
@@ -476,12 +508,17 @@ const PHASE_META: Record<
 > = {
   TJI: { label: "TJI COAST", color: "text-neutral-300", dot: "#d4d4d4" },
   FLYBY: { label: "FLYBY", color: "text-amber-300", dot: "#f5c76a" },
-  BURN: { label: "FUSION BURN", color: "text-amber-300", dot: "#f5c76a" },
+  BURN: { label: "TORCH BURN", color: "text-amber-300", dot: "#f5c76a" },
   CRUISE: { label: "CRUISE 0.100 C", color: "text-phos", dot: "#7beba6" },
+  MAGSAIL: { label: "MAGSAIL BRAKE", color: "text-amber-300", dot: "#f5c76a" },
+  CAPTURE: { label: "CAPTURE BURN", color: "text-amber-300", dot: "#f5c76a" },
 };
 
 function TelemetryPanel({ star, years }: { star: StarSystem; years: number }) {
   const st = missionState(star.distanceLy, years);
+  const tau = properTimeYears(star.distanceLy, years);
+  const beacon = solBeaconRxGhz(st.velKms);
+  const shield = shieldMarginPct(star.distanceLy, years);
   const [jit, setJit] = useState({ reactor: 84.2, hull: 291.4, vel: 0 });
 
   useEffect(() => {
@@ -513,21 +550,152 @@ function TelemetryPanel({ star, years }: { star: StarSystem; years: number }) {
       </div>
       <div className="tabular-nums">
         <DataRow label="T+ / MISSION" value={`${years.toFixed(2)} YR`} />
-        <DataRow label="RANGE / SOL" value={fmtAu(st.rangeAu)} />
+        <DataRow label="τ SHIP PROPER" value={`${tau.toFixed(2)} YR`} />
+        <DataRow label="RANGE / SOL" value={fmtRange(st.rangeAu)} />
         <DataRow label="RANGE / DEST" value={`${st.remainingLy.toFixed(3)} LY`} />
         <DataRow
           label="VELOCITY"
           value={fmtKms(st.velKms + (st.phase === "CRUISE" ? jit.vel : 0))}
         />
+        <DataRow label="LIGHT SPEED β" value={st.beta.toFixed(5)} />
         <DataRow label="LIGHT-TIME / SOL" value={fmtLightTime(st.rangeAu)} />
+        <DataRow
+          label="SOL BEACON RX"
+          value={`${beacon.toFixed(3)} GHZ`}
+          warn={beacon < 8.2}
+        />
         <DataRow label="FUSION STOCKPILE" value={`${st.propPct.toFixed(1)} %`} />
-        <DataRow label="REACTOR" value={`${jit.reactor.toFixed(1)} MW`} />
+        <DataRow
+          label="SHIELD MARGIN"
+          value={`${shield.toFixed(1)} %`}
+          warn={shield < 50}
+        />
         <DataRow label="HULL TEMP" value={`${jit.hull.toFixed(1)} K`} />
-        <DataRow label="COLD SLEEP" value={`${CREW_COUNT}/${CREW_COUNT} NOMINAL`} />
+        <DataRow label="TORPOR" value={`${CREW_COUNT}/${CREW_COUNT} NOMINAL`} />
       </div>
     </HudPanel>
   );
 }
+
+// ═══════════════════════ Intercept inset — proper-motion lead ═════════════════
+
+const InterceptPanel = memo(function InterceptPanel({ star }: { star: StarSystem }) {
+  const geo = useMemo(() => {
+    const icpt = interceptSolution(star);
+    const T = totalYears(star.distanceLy);
+    // pm screen direction: RA → +x, Dec → up (screen y flipped). Stars with
+    // southward pm get the geometry dropped to the upper half so the aim
+    // vector never lands in the footer.
+    const ang = Math.atan2(star.pmDecMasYr, star.pmRaMasYr);
+    const south = star.pmDecMasYr < 0;
+    const L = 54; // px — deliberately exaggerated
+    const vis: [number, number] = [252, south ? 64 : 96];
+    const icptPt: [number, number] = [
+      vis[0] + L * Math.cos(ang),
+      vis[1] - L * Math.sin(ang),
+    ];
+    return { icpt, T, vis, icptPt, south };
+  }, [star]);
+
+  const { icpt, T, vis, icptPt, south } = geo;
+  const trajAng = (Math.atan2(vis[1] - icptPt[1], icptPt[0] - 14) * 180) / Math.PI;
+  const icptRight = icptPt[0] <= 208; // ring far enough right for a start-anchored label
+  // AIM text rides 30% along the lead vector, offset off the line
+  const aimLbl: [number, number] = [
+    vis[0] + (icptPt[0] - vis[0]) * 0.3 - 10,
+    vis[1] + (icptPt[1] - vis[1]) * 0.3 + (south ? 10 : -8),
+  ];
+
+  return (
+    <HudPanel
+      title="Intercept — Proper Motion"
+      code="PLOT 03-D"
+      bodyClassName="p-2 sm:p-3"
+    >
+      <svg
+        viewBox="0 0 320 168"
+        className="h-auto w-full select-none"
+        role="img"
+        aria-label={`Intercept geometry for ${star.name}: the ship aims ahead of the star's visual position along its proper motion`}
+      >
+        {/* visual line of sight — dashed, from Sol */}
+        <line
+          x1="14" y1={vis[1]} x2={vis[0]} y2={vis[1]}
+          stroke="#ffffff" strokeOpacity="0.28" strokeWidth="0.9" strokeDasharray="4 5"
+        />
+        <text x="16" y="46" className="hal-mono" fontSize="6.5" fill="#737373">
+          LINE OF SIGHT · EPOCH 2098 — LIGHT LEFT {star.distanceLy.toFixed(1)} YR AGO
+        </text>
+
+        {/* true trajectory — solid, to the intercept */}
+        <line
+          x1="14" y1={vis[1]} x2={icptPt[0]} y2={icptPt[1]}
+          stroke={IVORY} strokeWidth="1.3" filter="url(#tp-glow)"
+        />
+        <path
+          d={`M${icptPt[0] - 9},${icptPt[1] - 6.4} L${icptPt[0] + 1},${icptPt[1]} L${icptPt[0] - 9},${icptPt[1] + 6.4} Z`}
+          fill={IVORY}
+          transform={`rotate(${trajAng} ${icptPt[0]} ${icptPt[1]})`}
+        />
+        <text x="20" y="128" className="hal-mono" fontSize="7.5" fill={IVORY}>
+          EXODUS — 0.100 C · T = {T.toFixed(0)} YR
+        </text>
+
+        {/* visual position — dashed cross */}
+        <g stroke="#a3a3ac" strokeWidth="1">
+          <line x1={vis[0] - 5} y1={vis[1]} x2={vis[0] + 5} y2={vis[1]} />
+          <line x1={vis[0]} y1={vis[1] - 5} x2={vis[0]} y2={vis[1] + 5} />
+        </g>
+        <text
+          x={vis[0] - 9}
+          y={vis[1] + 3.5}
+          textAnchor="end"
+          className="hal-mono" fontSize="7.5" fill="#a3a3ac"
+        >
+          AS SEEN
+        </text>
+
+        {/* intercept position — solid ring */}
+        <circle
+          cx={icptPt[0]} cy={icptPt[1]} r="5.5"
+          fill="none" stroke={PHOS} strokeWidth="1.2" filter="url(#tp-glow)"
+        />
+        <circle cx={icptPt[0]} cy={icptPt[1]} r="1.6" fill={PHOS} />
+        <text
+          x={icptRight ? icptPt[0] + 10 : icptPt[0] - 9}
+          y={icptPt[1] - 6}
+          textAnchor={icptRight ? "start" : "end"}
+          className="hal-mono" fontSize="7.5" fill="#a5f0c3"
+        >
+          INTERCEPT {Math.round(2098.274 + T)}
+        </text>
+
+        {/* lead vector */}
+        <line
+          x1={vis[0]} y1={vis[1]} x2={icptPt[0]} y2={icptPt[1]}
+          stroke={AMBER} strokeWidth="0.9" strokeDasharray="3 3"
+        />
+        <text
+          x={aimLbl[0]}
+          y={aimLbl[1]}
+          textAnchor="end"
+          className="hal-mono" fontSize="7" fill={AMBER}
+        >
+          AIM +{Math.round(icpt.aimAu).toLocaleString()} AU
+        </text>
+
+        {/* footer — true numbers */}
+        <line x1="14" y1="140" x2="306" y2="140" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="0.8" />
+        <text x="14" y="152" className="hal-mono" fontSize="7" fill="#737373">
+          μ = {(icpt.pmMasYr / 1000).toFixed(2)}″/YR · v_t = {icpt.vtKms.toFixed(0)} KM/S
+        </text>
+        <text x="14" y="161" className="hal-mono" fontSize="7" fill="#737373">
+          LEAD ANGLE {icpt.leadAngleDeg.toFixed(2)}° TRUE · OFFSET DRAWN ~×10³
+        </text>
+      </svg>
+    </HudPanel>
+  );
+});
 
 // ═══════════════════════ Composition ════════════════════════════════════════
 
@@ -542,8 +710,9 @@ export default function TransitPlot({
 }) {
   return (
     <div className="grid gap-3 lg:grid-cols-12">
-      <div className="lg:col-span-7">
+      <div className="space-y-3 lg:col-span-7">
         <DeparturePlate star={star} />
+        <InterceptPanel star={star} />
       </div>
       <div className="space-y-3 lg:col-span-5">
         <EquationPlate star={star} payloadMassT={payloadMassT} />

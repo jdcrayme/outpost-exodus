@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Planet, StarSystem } from "@/lib/mission/types";
 import { transitYears } from "@/lib/mission/stars";
-import { missionState } from "@/lib/mission/astro";
+import {
+  missionState,
+  fmtLightTime,
+  phaseBoundaries,
+  MAG_YEARS,
+  CAPTURE_YEARS,
+} from "@/lib/mission/astro";
+import { transitEvents } from "@/lib/mission/events";
 import { Lissajous } from "@/components/common/Lissajous";
 import { HudButton } from "@/components/common/HudPanel";
 import { halcyonAudio } from "@/lib/mission/audio";
@@ -13,6 +20,7 @@ import {
   HALCYON_BLIND_SURVEY,
   HALCYON_JOVIAN_LINE,
   HALCYON_KINETIC_LINE,
+  HALCYON_MAGSAIL_LINE,
   HALCYON_SURVEY_DONE,
   halcyonTransit,
 } from "@/lib/mission/halcyon";
@@ -28,6 +36,7 @@ export function TransitScreen({
   planets,
   hasProbe,
   payloadMassT,
+  equipment,
   onDone,
   onSpeak,
 }: {
@@ -35,10 +44,12 @@ export function TransitScreen({
   planets: Planet[];
   hasProbe: boolean;
   payloadMassT: number;
+  equipment: string[];
   onDone: () => void;
   onSpeak: (line: string) => void;
 }) {
   const totalYears = transitYears(star);
+  const events = useMemo(() => transitEvents(star, equipment), [star, equipment]);
   const [step, setStep] = useState(0); // 0 sep, 1 transit, 2 arrival, 3 survey, 4 complete
   const [years, setYears] = useState(0);
   const [signals, setSignals] = useState(0);
@@ -60,48 +71,54 @@ export function TransitScreen({
     });
     at(3400, () => setStep(1));
     at(3800, () => onSpeak(halcyonTransit(star, Math.round(totalYears))));
-    at(6000, () => onSpeak(HALCYON_JOVIAN_LINE));
-    at(8800, () => onSpeak(HALCYON_KINETIC_LINE));
+    at(6300, () => onSpeak(HALCYON_JOVIAN_LINE));
+    at(8600, () => onSpeak(HALCYON_KINETIC_LINE));
+    at(10800, () => {
+      // one mid-transit event, spoken — the decades are not kind
+      const spoken = events.find((e) => e.speech);
+      if (spoken?.speech) onSpeak(spoken.speech);
+    });
+    at(13200, () => onSpeak(HALCYON_MAGSAIL_LINE));
 
-    // step 1 — transit counting (7 s of screen time = decades)
-    at(11000, () => {
+    // step 1 — transit counting (8 s of screen time = decades)
+    at(15400, () => {
       setStep(2);
       halcyonAudio.ping();
       onSpeak(HALCYON_ARRIVAL);
     });
 
     // step 2 — arrival
-    at(15000, () => setStep(3));
+    at(19000, () => setStep(3));
 
     // step 3 — survey signals
     if (hasProbe) {
       planets.forEach((_, i) => {
-        at(15600 + i * 850, () => {
+        at(19600 + i * 850, () => {
           setSignals(i + 1);
           halcyonAudio.ping();
         });
       });
-      at(15600 + planets.length * 850 + 900, () => {
+      at(19600 + planets.length * 850 + 900, () => {
         setStep(4);
         halcyonAudio.confirm();
         onSpeak(HALCYON_SURVEY_DONE);
       });
-      at(16500 + planets.length * 850 + 2400, () => {
+      at(20500 + planets.length * 850 + 2400, () => {
         if (!doneRef.current) {
           doneRef.current = true;
           onDone();
         }
       });
     } else {
-      at(17200, () => {
+      at(20200, () => {
         halcyonAudio.scan();
         setSignals(planets.length);
       });
-      at(20000, () => {
+      at(23000, () => {
         setStep(4);
         onSpeak(HALCYON_BLIND_SURVEY);
       });
-      at(23000, () => {
+      at(26000, () => {
         if (!doneRef.current) {
           doneRef.current = true;
           onDone();
@@ -119,7 +136,7 @@ export function TransitScreen({
     const t0 = performance.now();
     let raf = 0;
     const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / 6800);
+      const p = Math.min(1, (t - t0) / 11000);
       setYears(p * totalYears);
       if (p < 1) raf = requestAnimationFrame(tick);
     };
@@ -136,8 +153,12 @@ export function TransitScreen({
     }
   };
 
-  const remainingLy = missionState(star.distanceLy, years).remainingLy;
+  const st = missionState(star.distanceLy, years);
+  const remainingLy = st.remainingLy;
   const landable = planets.filter((p) => p.landable).length;
+  const pb = phaseBoundaries(star.distanceLy);
+  const fBurn = (pb.tBurnEnd / totalYears) * 100;
+  const fMag = ((pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS) / totalYears) * 100;
 
   return (
     <div className="relative mx-auto flex min-h-[calc(100vh-8.5rem)] max-w-5xl flex-col items-center justify-center px-4 py-8">
@@ -178,13 +199,13 @@ export function TransitScreen({
                 INTERSTELLAR TRANSIT
               </div>
               <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-neutral-400">
-                DESTINATION {star.name} · JOVIAN DEPARTURE SOLUTION · CRUISE 0.100 C
+                DESTINATION {star.name} · JOVIAN DEPARTURE · CRUISE 0.100 C · MAGSAIL BRAKE {Math.round(totalYears - MAG_YEARS - CAPTURE_YEARS + 2098.274)}
               </div>
             </div>
 
-            <div className="mx-auto grid max-w-2xl grid-cols-3 gap-3 border border-ink/10 bg-black/40 p-3 text-center sm:p-4">
+            <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 border border-ink/10 bg-black/40 p-3 text-center sm:grid-cols-4 sm:p-4">
               <div>
-                <div className="hal-display glow-phos text-xl text-phos sm:text-3xl">
+                <div className="hal-display glow-phos text-xl text-phos sm:text-2xl">
                   {years.toFixed(1)}
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
@@ -192,7 +213,7 @@ export function TransitScreen({
                 </div>
               </div>
               <div>
-                <div className="hal-display text-xl text-ink sm:text-3xl">
+                <div className="hal-display text-xl text-ink sm:text-2xl">
                   {remainingLy.toFixed(2)}
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
@@ -200,11 +221,19 @@ export function TransitScreen({
                 </div>
               </div>
               <div>
-                <div className="hal-display text-xl text-ink sm:text-3xl">
+                <div className="hal-display text-xl text-ink sm:text-2xl">
+                  {fmtLightTime(st.rangeAu)}
+                </div>
+                <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
+                  LIGHT-TIME TO SOL
+                </div>
+              </div>
+              <div>
+                <div className="hal-display text-xl text-ink sm:text-2xl">
                   207
                 </div>
                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
-                  CREW · COLD SLEEP
+                  CREW · TORPOR
                 </div>
               </div>
             </div>
@@ -217,9 +246,25 @@ export function TransitScreen({
                   className="h-full bg-ink/85 transition-[width] duration-100"
                   style={{ width: `${(years / totalYears) * 100}%` }}
                 />
+                {/* phase ticks — torch out, magsail deploy */}
+                <div className="pointer-events-none absolute inset-0">
+                  {[fBurn, fMag].map((f) => (
+                    <div
+                      key={f}
+                      className="absolute top-[-3px] h-[14px] w-px bg-amber-400/50"
+                      style={{ left: `${f}%` }}
+                    />
+                  ))}
+                </div>
               </div>
               <div className="hal-mono mt-1.5 flex justify-between text-[9px] tracking-widest text-neutral-600">
                 <span>TJI BURN 2098.274</span>
+                <span className="hidden sm:inline text-amber-400/60">
+                  TORCH OUT {Math.round(2098.274 + pb.tBurnEnd)}
+                </span>
+                <span className="hidden sm:inline text-amber-400/60">
+                  MAGSAIL DEPLOY {Math.round(2098.274 + pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS)}
+                </span>
                 <span>ARRIVAL {Math.round(2098.274 + totalYears)}</span>
               </div>
             </div>

@@ -223,13 +223,23 @@ distributions**; the manifest is a reading room, not an editor.
 
 ---
 
-## 5. ROADMAP — In-system probe campaign
+## 5. ROADMAP — The survey campaign & the orbital-first doctrine
 
-**Concept**: after the flyby probe's coarse data, allocate **dedicated mapping
-and sampler probes** during transit (gives the long-transit screen something to
-do); their data layers resolve on approach.
+The mission is not a landing with support infrastructure; it is an
+**orbital industrial colonization** that may — optionally, later — put a
+branch office down a gravity well. The survey campaign exists to tell us
+which well, and whether.
 
-What colonists actually want, mapped to real instrument classes:
+### 5.1 Campaign waves — what is sent, and when
+
+| Wave | When | What | Data it returns |
+| --- | --- | --- | --- |
+| 0 — Precursors | 2060s–90s, Earth-launched (canon) | Gram-scale laser sail swarms + precursor interferometry | the coarse system data on the STAR screen — this is where "known worlds" come from; mass/orbit only |
+| 1 — The courier | 2098, ship-launched at Jovian departure | The VLBI probe (120 t on a ~380 t torch stage, 0.135 c — it has its OWN exhaust and magsail) | survey-grade imagery from a captured orbit, arriving ~25–30 yr ahead of the ship; its laser downlink overtakes us years before arrival |
+| 2 — The micro-swarm | launched from the ship during transit (years 3–10) | The table below — small coasters, one instrument each | one dossier layer per probe, resolving on approach |
+| 3 — Arrival infrastructure | system entry, before any surface contact | SEED-robotics: relay constellation, ISRU survey crawlers on the chosen moon/asteroid | the comms/power backbone for everything after |
+
+What Wave-2 colonists actually want, mapped to real instrument classes:
 
 | Probe | Instrument analog | Buys | Feeds |
 | --- | --- | --- | --- |
@@ -240,11 +250,87 @@ What colonists actually want, mapped to real instrument classes:
 | Radiation/magnetometer orbiter | particle + magnetometer suite | belt mapping | regolith shielding depth |
 | Relay satellite | comms | surface ops radius | colony automation |
 
-**Design hook — probes cost payload mass on the equipment screen**: certainty
-vs cargo is the trade. And probe results can **contradict the flyby estimate**
-(the atmosphere measured at 0.8 atm on flyby reads 0.3 atm on entry) — probes
+**Design hook — every wave costs payload mass on the equipment screen**:
+certainty vs cargo is the trade. Wave-2 results can **contradict the courier**
+(the atmosphere the courier read at 0.8 atm reads 0.3 atm on entry) — probes
 buy *certainty*, not just data. Land blind and every unknown becomes a
 colony-start risk event drawn from the seed.
+
+### 5.2 Where the hardware goes — destinations by what they're for
+
+The system survey isn't "scan the planet"; it's an infrastructure survey.
+Specialized assets go to specialized places:
+
+- **Gas giant (if present)** — the volatiles & fuel depot: He-3 skimming for
+  the next generation of ships, radiation-belt mapping (hazard), icy moons
+  (water, organics). A cold Jupiter like ε Ind b is a gift: it shepherds the
+  small bodies into reachable families.
+- **Asteroid belts / debris disks** (ε Eri is the archetype) — metals,
+  feedstock, low-Δv industry. The first factory goes here, not on the planet.
+- **Icy moons & comets** — water and propellant. Every kilogram of shielding
+  and reaction mass that doesn't come up a gravity well.
+- **The scorched inner world** — beamed-power site: thin atmosphere, brutal
+  insolation, nobody lives there, and it can beam power anywhere in-system.
+- **L4/L5 & high orbits of the HZ world** — the relay constellation, staging
+  depots, the quarantine station (see 5.5).
+- **The HZ world itself** — last, not first. Sealed bio-assay before any
+  open-cycle contact (the abiotic-O₂ branch, engine.ts REV F).
+
+### 5.3 The orbital-first doctrine
+
+The user-facing thesis: **stay out of the well until the well is worth it.**
+Surface-to-orbit costs 8–9 km/s every round trip; asteroid rendezvous from
+interplanetary arrival costs a fraction of that, and nothing you build in
+orbit falls down. Consequences for the game:
+
+- The SEED lander stays mandatory for the *surface branch* but the
+  **PLANET screen becomes a DESTINATION screen**: a world, a moon, or an
+  orbit is a valid target.
+- **The Exodus never lands.** She is the founding orbital asset — the
+  reactor, the machine shop, the genetic archive, and the only hull rated
+  for the interstellar medium. Parking her in a graveyard orbit is doctrine.
+- Surface packages become *exports* from orbital industry, not imports
+  from orbit: the first thing the asteroid factory builds is the landing
+  gear for everything after it.
+
+### 5.4 Spacers — the crew who refuse the well
+
+Some fraction of the 207 will elect never to make planetfall even when it's
+available: the shipyard crews, the refinery watch, the relay maintainers —
+and their children, who will be multigenerational by simple arithmetic
+(Proxima-class transits are 60–140 yr; the colony's second generation is
+born in orbit regardless). Design consequences:
+
+- The crew manifest gains an **allocation question** (surface vs orbital
+  cohort split), sharing UI language with the payload budget.
+- Population genetics quietly favors the split: two semi-isolated
+  populations (orbital + surface) exchange migrants and keep a much larger
+  effective population than either alone.
+- HALCYON gets a line about it, because of course he does.
+
+### 5.5 What the player is managing (the tradeoff graph)
+
+- **Certainty vs mass** — probes and assay capability against tonnes of
+  colony. (Live today: VLBI, science lander.)
+- **Redundancy vs margin** — shipshop + torpor reserve batteries vs more
+  of everything else; the transit-events system prices the choice.
+- **Surface vs orbital** — where the industrial mass goes (5.3).
+- **Present vs future** — He-3 from the gas giant only matters if someone
+  builds the second ship. The endgame question: does this colony launch
+  its own Exodus?
+- **Quarantine vs speed** — the abiotic-O₂ world: assay it slowly with a
+  bio-cabinet, or accept the risk and settle fast.
+
+### 5.6 How the plan changes by system (the payoff)
+
+| System archetype | Example | The plan bends toward |
+| --- | --- | --- |
+| Flare M dwarf | Proxima, Wolf 359 | orbital + terminator-string outposts; shielding mass over lander mass; SPS over surface solar |
+| Quiet M/K dwarf | Ross 128, Lacaille 9352, ε Ind | cheap surface branch possible; still assay-first (abiotic O₂ risk is highest here) |
+| G-twin | τ Cet, α Cen A | the textbook surface-first case — if the debris disk cooperates |
+| Young dusty K dwarf | ε Eri | asteroid industry first; dust-hardened relays; the best factory site in the catalog |
+| Giant-bearing system | ε Ind, ε Eri | volatiles economy; He-3 option; radiation-belt survey before anything else |
+| No viable world at all | (possible) | pure orbital colony — the free-fort; the PLANET screen's honest answer is "none of these, take the belt" |
 
 ---
 
@@ -257,6 +343,7 @@ colony-start risk event drawn from the seed.
 | `hal-mono` / `hal-display` | IBM Plex Mono body / weight-600 annotation |
 | `src/app/globals.css` | instrument layer: grid-paper, CRT overlay, draw-on, blueprint classes (`bp-*`) |
 | `src/lib/mission/engine.ts` | `mulberry32`, `hashString`, seeded system generation |
+| `src/lib/mission/events.ts` | seeded transit failures — equipment-dependent outcomes (REV F) |
 | `src/lib/mission/equipment.ts` | payload catalog + capacities |
 | `src/lib/mission/ship.ts` | ship architecture — `STOWAGE`, `BAYS`, `RACK`; shared by the blueprint, the crew manifest, and the future hangar view |
 | `src/lib/mission/crew.ts` | the 207-soul roster — coverage-guaranteed cohorts, address-keyed seeds, load-time assertions |
@@ -280,3 +367,119 @@ the ship is a document, and documents have drawing numbers.
   into the existing dossier?
 - Multiplayer/archive hook: publish the final mission profile as a shareable
   seed string?
+
+---
+
+## 8. REALISM PASS — REV F (implemented)
+
+The 2026 realism audit, implemented and verified (`scripts/verify-revf.ts`).
+The charter bar — "honest to mission-design sketch level" — was applied to
+the whole transit chain. Numbers below are computed, not quoted.
+
+### 8.1 The ship can now stop — magsail architecture (`astro.ts`)
+
+The old model cruised at 0.1 c and simply… arrived. The 12.4 % propellant
+reserve only buys 7,471 km/s (0.025 c); stopping on it alone needs an
+exhaust velocity of 0.47 c. **Fix (Zubrin/Andrews):** a magsail — ram drag
+against the ISM, propellantless. `a = a₀(v/v₀)²` ⇒ `v(t) = v₀/(1+t/τ′)`;
+a₀ = 0.25 m/s² at 0.1 c (≈1,900 km superconducting loop on our 62 kt
+burnout mass), deployed **0.77 ly out**, braking 29,979 → 4,000 km/s over
+**24.7 yr**, then the fusion reserve finishes the capture burn with ~44 %
+margin. Braking the last factor of ten in speed would take another century —
+documented as the honest architecture. New phases: `MAGSAIL`, `CAPTURE`.
+
+New canon transit totals (TJI 2.7 + torch 2.0 + cruise + brake 24.7 + 0.3):
+
+Proxima 63.6 yr · Barnard 80.7 · Wolf 359 99.7 · ε Eri 125.9 ·
+τ Cet 140.2 (was 45.2 / 62.4 / 81.3 / 107.2 / 121.9 — the brake is the
+difference; the crew sleeps through it).
+
+### 8.2 The torch is sustained, not impulsive
+
+An 18-day 0.1 c burn ⇒ ~2 GN thrust, ~34 PW jet power, ~1,200 km² of
+radiator: nonsense. **Fix:** `BURN_YEARS = 2.0` (Daedalus-class staging) ⇒
+jet power ~0.9 TW, thermal rejection ~34 km² of 1,450 K droplet curtain.
+The blueprint radiators are redrawn as droplet curtains with drafting-break
+symbols and honest area labels (GA drawing REV E → REV F).
+
+This also settles the Sundiver question: **a perihelion Oberth dive was
+considered and rejected** — Oberth multiplies impulsive burns and does
+nothing for a two-year torch. The Jovian flyby keeps its real job: bending
+the escape asymptote 115.8° toward a high-declination target (the assist's
+worth is direction, not the 5.7 km/s).
+
+### 8.3 Cold sleep is torpor — 281 K, not 4 K
+
+4.1 K against 300 K bay walls is Carnot COP 0.014 (72 W per watt removed)
+and km² of 4 K radiator: thermodynamic fantasy. **Fix:** therapeutic torpor
+at ~281 K (+8 °C) — SpaceWorks-NIAC-style hypothermia with periodic wake
+cycles. The sailors' jargon stays ("cold sleep"); every *measurement* on
+screen now says TORPOR and reads 281.x K. `ship.ts` documents the physics.
+
+### 8.4 Relativistic & light-lag plate @ 0.1 c
+
+New telemetry (`astro.ts` + transit screen): **ship proper time** τ = ∫dt/γ
+(Proxima saves 0.19 yr of crew aging — τ and T+ now differ on the dial);
+**β**; **Sol beacon Doppler** — the 8.4 GHz Earth archive beacon received
+at 7.60 GHz during cruise, drifting back up as the magsail bites; one-way
+light time growing from hours to decades (stat row + `fmtRange` in LY).
+
+### 8.5 Proper motion & the intercept lead (`stars.ts`)
+
+All 16 stars now carry real Gaia DR3 / Hipparcos proper motions (mas/yr).
+The ship aims **ahead of the visual position**: Barnard's Star (10.39″/yr,
+90 km/s tangential) moves 1,647 AU between launch and intercept — lead
+angle 0.25°; Lacaille 9352 3,150 AU (0.27°); τ Cet 1,068 AU. Star dossier
+rows (PROPER MOTION · INTERCEPT LEAD), the **PLOT 03-D intercept inset** on
+the transit plate (visual cross vs intercept ring, offset honestly labelled
+~×10³), and HALCYON's aim-ahead line for stars with >500 AU of lead.
+
+### 8.6 The decades are not kind — transit events (`events.ts`)
+
+Seeded, deterministic from star + manifest: Whipple-stack grain strikes,
+torpor-bay bus brownouts (absorbed **iff** the reserve battery is aboard),
+radiator curtain ruptures (remanufactured **iff** the shipshop is aboard),
+cargo-cell strikes (feedstock reclaimed iff…), HALCYON core transients, ISM
+density fronts. New equipment: **SHIPBOARD REMANUFACTURING SHOP** (85 t,
+rack V1-10/11, stamp RMS) — spares are dead mass, feedstock is alive.
+Manifest is now 2,160 t vs 1,760 t capacity. Also new: **Whipple-shield
+erosion budget** telemetry (v³-weighted dose, τ = 300 yr: 89 % margin at
+Proxima, 69 % at τ Cet).
+
+### 8.7 Abiotic O₂ — the ambiguous garden world (`engine.ts`)
+
+Free O₂ around late-K/M dwarfs can be pre-main-sequence water-loss residue
+(Luger & Barnes 2015), not biology. Breathable worlds around <0.75 M☉ now
+carry `abioticRisk`; the dossier shows the quarantine box; the prognosis
+carries a BIO-SIGNATURE RESOLVE factor (+2 with the science lander's
+bio-cabinet, −6 without); HALCYON refuses to shake hands with anything.
+Flare class now gates oxygen (quiet stars keep atmospheres; flare stars
+rarely do). In the current seed: ε Eri IV is a true biotic garden (71/100,
+−1 °C); 61 Cyg III is the ambiguous one (43/100, free O₂, origin unresolved).
+
+### 8.8 Greenhouse & albedo calibration (`engine.ts`)
+
+Equilibrium temperature now uses albedo 0.3 (254.6 K at 1 AU — was 278.6,
+which is the albedo-zero value) and greenhouse ΔT = 33·√p K (Earth: +15 °C
+exactly; Mars ~3 K at 6 mbar), collapsing outside the HZ. The old model put
+Earth at 9.7 °C and needed the ≥48 suitability fudge to rescue frozen
+worlds; the new one lands HZ worlds between −40 and +32 °C on its own.
+
+### 8.9 Verified
+
+`npx tsc --noEmit` clean; `npm run build` clean; module-load assertions
+pass (bay arithmetic, rack addresses, portraits doctrine);
+`scripts/verify-revf.ts` confirms: phase boundaries, magsail velocity
+curve, proper-time integration, beacon Doppler, shield margin, intercept
+geometry, per-star viable candidates (16/16 ≥ 48), and the KE line (29.8×
+the 2098 impactor — HALCYON rounds to thirty).
+
+Visual QA (dev tooling, `playwright-core` dev dep): `scripts/smoke-visual.mjs`
+clicks INTRO→BOOT→STAR→EQUIP→CREW→TRANSIT→PLANET→PROFILE against
+`next start` and screenshots every changed screen;
+`scripts/check-labels.mjs` asserts every blueprint text label's `getBBox()`
+fits the viewBox; `scripts/check-geometry.mjs` asserts the radiator panels
+never intersect the aft tanks/stages/labels in screen space (0 overlaps).
+Screenshots were reviewed by VLM for collisions — three real layout bugs
+were found and fixed this way (radiator stubs crossing the drop-stages,
+the intercept-inset label placements, the thermal-rejection label site).

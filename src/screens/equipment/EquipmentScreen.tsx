@@ -110,7 +110,7 @@ export function EquipmentScreen({
               </span>
             </span>
             <span>
-              FULL MANIFEST <span className="text-neutral-300">2,075 T</span> —
+              FULL MANIFEST <span className="text-neutral-300">2,160 T</span> —
               EVERY CONFIGURATION IS A SACRIFICE
             </span>
           </div>

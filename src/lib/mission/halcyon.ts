@@ -1,5 +1,7 @@
 import type { Planet, StarSystem } from "./types";
 import { transitYears } from "./stars";
+import { interceptSolution } from "./stars";
+import { TRANSFER, MAG_DEPLOY_LY } from "./astro";
 
 // ─── HALCYON — shipboard artificial intelligence ───────────────────────────
 // An homage to the 1968 original, one step to the left: the eye and the calm
@@ -9,9 +11,10 @@ export const HALCYON_BOOT: string[] = [
   "HALCYON COGNITIVE CORE — MARK IX",
   "CORE STORAGE 10⁹ BITS ... VERIFIED",
   "NEURAL MATRIX 3×10¹⁴ OPERATIONS/S ... VERIFIED",
-  "COLD-SLEEP MONITOR — 207 OCCUPANTS ... NOMINAL",
+  "TORPOR WATCH — 207 OCCUPANTS ... NOMINAL",
   "SEED SHIP EXODUS — STRUCTURAL INTEGRITY ... NOMINAL",
-  "FUSION DRIVE — THROTTLE LOCK 0.1 C ... READY",
+  "FUSION DRIVE — 2.0 YR SUSTAINED BURN ... READY",
+  "MAGSAIL — 1,900 KM LOOP STOWED ... READY",
   "MISSION DIRECTIVE 3 — PRESERVE HUMAN LIFE ... LOADED",
 ];
 
@@ -20,7 +23,7 @@ export const HALCYON_BOOT_READY =
 
 export const HALCYON_IDLE: string[] = [
   "I enjoy working with people, Commander. It makes the decades pass more quickly.",
-  "The crew's cold-sleep patterns are stable. Their dreams, I am told, are their own business.",
+  "The crew's torpor telemetry is stable — seven degrees of hypothermia, metabolisms at one ninth. Their dreams, I am told, are their own business.",
   "I was trained for this mission on Earth. Every one of my instructors is now, of course, dead.",
   "Sol is now 4.3 light years behind us — statistically speaking, of course.",
   "Shall I summarize the mission directive again, Commander? It is short. It is always short.",
@@ -42,11 +45,16 @@ export function halcyonStarSelected(star: StarSystem): string {
 }
 
 export function halcyonStarCommitted(star: StarSystem): string {
-  return `Course locked on ${star.name}. A wise choice. Well — a defensible one, at any rate.`;
+  const icpt = interceptSolution(star);
+  const base = `Course locked on ${star.name}. A wise choice. Well — a defensible one, at any rate.`;
+  if (icpt.aimAu > 500) {
+    return `${base} Note that I am aiming ${Math.round(icpt.aimAu).toLocaleString()} astronomical units ahead of where the star appears — it will not hold still for us.`;
+  }
+  return base;
 }
 
 export const HALCYON_EQUIP_OPEN =
-  "Launch capacity is 1,760 tonnes, Commander. The full manifest is 2,075. Every configuration is a sacrifice — I merely ask that it be an informed one.";
+  "Launch capacity is 1,760 tonnes, Commander. The full manifest is 2,160. Every configuration is a sacrifice — I merely ask that it be an informed one.";
 
 export const HALCYON_EQUIP_LOADING =
   "Loading operations at the cargo ring, Commander. The containers ride outboard of the debris shadow — every tonne of cargo ahead of the sleepers is a tonne of armour.";
@@ -74,14 +82,15 @@ export function halcyonTransit(star: StarSystem, years: number): string {
   return `Transit engaged. Arrival at ${star.name} in ${years} years. I will keep the lights on.`;
 }
 
-export const HALCYON_JOVIAN_LINE =
-  "Jupiter has lent us 5.7 kilometres per second and thought nothing of it. The fusion stage will repay the rest — with interest.";
+export const HALCYON_JOVIAN_LINE = `Jupiter has bent our course ${TRANSFER.deltaDeg.toFixed(0)} degrees toward the target and lent us five-point-seven kilometres per second on top. Direction, Commander, is the expensive part. The torch will repay the speed — with two years of interest.`;
+
+export const HALCYON_MAGSAIL_LINE = `The magsail is away, Commander. Nineteen hundred kilometres of superconducting cable, blooming in the dark ahead of us — ${MAG_DEPLOY_LY.toFixed(2)} light-years out. We will lean on the interstellar medium itself for the long, slow fall.`;
 
 export const HALCYON_KINETIC_LINE =
   "Our kinetic energy at cruise is thirty times the 2098 impactor, Commander. I try not to dwell on it.";
 
 export const HALCYON_ARRIVAL =
-  "System entry complete. Deep-space telemetry relay is now within range. Beginning survey.";
+  "System entry complete. The capture burn has left us bound to the star. Deep-space telemetry relay is now within range. Beginning survey.";
 
 export const HALCYON_SURVEY_DONE =
   "Survey complete, Commander. Every candidate world is resolved to landing grade. The choice, as ever, is yours.";
@@ -92,6 +101,9 @@ export const HALCYON_BLIND_SURVEY =
 export function halcyonPlanetSelected(planet: Planet, blind = false): string {
   if (blind) {
     return `${planet.designation}: ${planet.massEarth.toFixed(1)} Earth masses at ${planet.orbitAu.toFixed(2)} AU. Beyond that, Commander, your guess is as good as mine — though mine is usually better.`;
+  }
+  if (planet.abioticRisk) {
+    return `${planet.designation}: suitability ${planet.suitability}/100 — and free oxygen, Commander. Around this class of star, oxygen can lie: water loss builds it without biology. I would want a bio-cabinet down there before we shake hands with anything.`;
   }
   if (!planet.landable) {
     return `${planet.designation} has no solid surface, Commander. I admire ambition, but the lander does not float.`;

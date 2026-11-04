@@ -12,6 +12,13 @@ import { CREW_COUNT } from "./astro";
 // shadow cone, staggered clock positions, alternating power buses: no single
 // catastrophe — strike, fire, bus loss — reaches a second bay. 12 × 17 = 204
 // sleepers + 3 command watch = 207 souls, which must equal CREW_COUNT.
+//
+// PHYSICS (REV F): "cold sleep" is mission jargon for therapeutic torpor —
+// ~281 K (+8 °C), sedated, metabolisms at roughly one ninth, periodic wake
+// cycles (SpaceWorks NIAC-style hypothermia), NOT cryogenics. True 4 K cryo
+// would need ~72 W of electricity per watt removed (Carnot) and km² of
+// 4 K radiator against the CMB — thermodynamic fantasy. The sailors' word
+// stays; the telemetry tells the truth.
 
 export const WATCH_CREW = 3;
 export const BAY_COUNT = 12;
@@ -31,7 +38,7 @@ export interface ColdSleepBay {
   offset: number; // elevation offset from the centreline (m, staggered)
   clock: string; // clock position around the spine
   bus: "A" | "B"; // power bus (alternating — no two neighbours share one)
-  loopK: number; // cryo loop setpoint, K — cosmetic telemetry
+  loopK: number; // torpor water-loop setpoint, K — cosmetic telemetry
 }
 
 const BAY_PITCH = 6.35; // m between bay centres: 5.4 m bay + 0.95 m truss gap
@@ -43,7 +50,7 @@ export const BAYS: ColdSleepBay[] = Array.from({ length: BAY_COUNT }, (_, i) => 
   offset: i % 2 === 0 ? -0.4 : 0.4,
   clock: i % 2 === 0 ? "10 O'CLOCK" : "02 O'CLOCK",
   bus: i % 2 === 0 ? "A" : "B",
-  loopK: 4.1 + ((i * 37) % 4) * 0.1,
+  loopK: 281.1 + ((i * 37) % 4) * 0.1,
 }));
 
 // ── Cargo ring — the front of the spine ──────────────────────────────────────
@@ -81,6 +88,7 @@ export const STOWAGE: Record<string, Stowage> = {
   commsat: { kind: "rack", cells: ["V1-03"], stamp: "COM" },
   navbeacon: { kind: "rack", cells: ["V1-05"], stamp: "NAV" },
   rovers: { kind: "rack", cells: ["V1-07", "V1-08"], stamp: "RVR" },
+  shipshop: { kind: "rack", cells: ["V1-10", "V1-11"], stamp: "RMS" },
   // strongback docks
   vlbi: { kind: "dock", side: "D", sta: 16.5 }, // launch cradle at the bow
   residential: { kind: "dock", side: "D", sta: 85 },

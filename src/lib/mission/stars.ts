@@ -4,7 +4,8 @@ import { totalYears } from "./astro";
 // ─── Stellar candidates — real systems within ~12 light years ───────────────
 // Data cross-checked against Hipparcos/Gaia astrometry. RA in hours, Dec in
 // degrees. Luminosities bolometric. Flare classifications per variable-star
-// catalogues (GJ, V* designations).
+// catalogues (GJ, V* designations). Proper motions from Gaia DR3
+// (2020yCat.1350....0G) / Hipparcos for the brightest, mas/yr, rounded.
 
 export const SOL: StarSystem = {
   id: "sol",
@@ -14,6 +15,8 @@ export const SOL: StarSystem = {
   distanceLy: 0,
   ra: 0,
   dec: 0,
+  pmRaMasYr: 0,
+  pmDecMasYr: 0,
   spectral: "G2V",
   massSolar: 1,
   luminositySolar: 1,
@@ -33,6 +36,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 4.246,
     ra: 14.4953,
     dec: -62.6794,
+    pmRaMasYr: -3781.7,
+    pmDecMasYr: 769.5,
     spectral: "M5.5Ve",
     massSolar: 0.122,
     luminositySolar: 0.0017,
@@ -50,6 +55,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 4.365,
     ra: 14.6601,
     dec: -60.8341,
+    pmRaMasYr: -3608.0,
+    pmDecMasYr: 686.0,
     spectral: "G2V",
     massSolar: 1.078,
     luminositySolar: 1.519,
@@ -67,6 +74,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 5.963,
     ra: 17.9634,
     dec: 4.6933,
+    pmRaMasYr: -801.6,
+    pmDecMasYr: 10362.4,
     spectral: "M4V",
     massSolar: 0.144,
     luminositySolar: 0.0035,
@@ -84,6 +93,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 7.856,
     ra: 10.9414,
     dec: 7.0147,
+    pmRaMasYr: -3866.3,
+    pmDecMasYr: -2699.2,
     spectral: "M6V",
     massSolar: 0.09,
     luminositySolar: 0.0011,
@@ -101,6 +112,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 8.307,
     ra: 11.0556,
     dec: 35.9694,
+    pmRaMasYr: -580.1,
+    pmDecMasYr: -4776.6,
     spectral: "M2V",
     massSolar: 0.39,
     luminositySolar: 0.026,
@@ -118,6 +131,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 8.659,
     ra: 6.7525,
     dec: -16.7161,
+    pmRaMasYr: -546.0,
+    pmDecMasYr: -1223.1,
     spectral: "A1V",
     massSolar: 2.063,
     luminositySolar: 25.4,
@@ -135,6 +150,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 8.79,
     ra: 1.6503,
     dec: -17.9494,
+    pmRaMasYr: 3385.3,
+    pmDecMasYr: 544.4,
     spectral: "M5.5V + M6V",
     massSolar: 0.102,
     luminositySolar: 0.0009,
@@ -152,6 +169,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 9.706,
     ra: 18.8304,
     dec: -23.8358,
+    pmRaMasYr: 639.4,
+    pmDecMasYr: -194.0,
     spectral: "M3V",
     massSolar: 0.17,
     luminositySolar: 0.0038,
@@ -169,6 +188,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 10.29,
     ra: 23.6987,
     dec: 44.1783,
+    pmRaMasYr: 112.5,
+    pmDecMasYr: -1591.7,
     spectral: "M5.5V",
     massSolar: 0.12,
     luminositySolar: 0.0018,
@@ -186,6 +207,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 10.475,
     ra: 3.5488,
     dec: -9.4583,
+    pmRaMasYr: -974.8,
+    pmDecMasYr: 20.9,
     spectral: "K2V",
     massSolar: 0.82,
     luminositySolar: 0.34,
@@ -203,6 +226,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 10.719,
     ra: 23.0981,
     dec: -35.8512,
+    pmRaMasYr: 6766.0,
+    pmDecMasYr: 1330.3,
     spectral: "M0.5V",
     massSolar: 0.52,
     luminositySolar: 0.037,
@@ -220,6 +245,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 11.007,
     ra: 11.7956,
     dec: 0.8022,
+    pmRaMasYr: 607.3,
+    pmDecMasYr: -1223.0,
     spectral: "M4V",
     massSolar: 0.164,
     luminositySolar: 0.0036,
@@ -231,12 +258,14 @@ export const STARS: StarSystem[] = [
   },
   {
     id: "cygni61",
-    name: "61 CYGANI A",
+    name: "61 CYGNI A",
     shortName: "61CYG",
     catalog: "HD 201091 / GJ 820 A",
     distanceLy: 11.403,
     ra: 21.115,
     dec: 38.7459,
+    pmRaMasYr: 4164.2,
+    pmDecMasYr: 3249.6,
     spectral: "K5V",
     massSolar: 0.7,
     luminositySolar: 0.086,
@@ -254,6 +283,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 11.457,
     ra: 7.655,
     dec: 5.225,
+    pmRaMasYr: -714.6,
+    pmDecMasYr: -1036.8,
     spectral: "F5IV–V",
     massSolar: 1.499,
     luminositySolar: 6.93,
@@ -271,6 +302,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 11.867,
     ra: 22.056,
     dec: -56.7864,
+    pmRaMasYr: 3966.7,
+    pmDecMasYr: -2536.2,
     spectral: "K5V",
     massSolar: 0.71,
     luminositySolar: 0.22,
@@ -288,6 +321,8 @@ export const STARS: StarSystem[] = [
     distanceLy: 11.912,
     ra: 1.7345,
     dec: -15.9373,
+    pmRaMasYr: -1721.7,
+    pmDecMasYr: 855.0,
     spectral: "G8V",
     massSolar: 0.783,
     luminositySolar: 0.52,
@@ -317,4 +352,37 @@ export function starPosition(star: StarSystem): [number, number, number] {
     d * Math.sin(dec),
     d * Math.cos(dec) * Math.sin(ra),
   ];
+}
+
+// ── Intercept geometry — aiming where the star will be ───────────────────────
+// The catalog positions are where the stars APPEAR (light already in flight at
+// launch). The aim point is pm × (light-time + transit time) ahead of the
+// visual position. Barnard's Star covers ~1,300 AU between our launch and our
+// arrival — invisible on the plot, fatal if ignored.
+
+export interface InterceptSolution {
+  /** Total proper motion magnitude, mas/yr. */
+  pmMasYr: number;
+  /** Tangential velocity, km/s (v_t = 4.74 μ″/yr · d_pc). */
+  vtKms: number;
+  /** Star's drift during the transit itself, AU. */
+  driftAu: number;
+  /** Total aim-ahead from the visual position (light-time + transit), AU. */
+  aimAu: number;
+  /** Angle between visual line-of-sight and the intercept line, degrees. */
+  leadAngleDeg: number;
+}
+
+export function interceptSolution(star: StarSystem): InterceptSolution {
+  const dPc = star.distanceLy / 3.26156;
+  const pmMasYr = Math.hypot(star.pmRaMasYr, star.pmDecMasYr);
+  const vtKms = 4.74 * (pmMasYr / 1000) * dPc;
+  const tYr = totalYears(star.distanceLy);
+  const lookbackYr = star.distanceLy; // where the star was, when its light left
+  const kmPerYr = vtKms * 31_557_600;
+  const driftAu = (kmPerYr * tYr) / 1.495978707e8;
+  const aimAu = (kmPerYr * (tYr + lookbackYr)) / 1.495978707e8;
+  const leadAngleDeg =
+    (Math.atan2(aimAu, star.distanceLy * 63_241.077) * 180) / Math.PI;
+  return { pmMasYr, vtKms, driftAu, aimAu, leadAngleDeg };
 }

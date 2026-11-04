@@ -283,8 +283,9 @@ function buildPlanet(
   const rE = radiusKm / 6371;
   const gravityG = massEarth / (rE * rE);
 
-  // Insolation equilibrium temperature (albedo 0.3)
-  const teqK = 278.6 * Math.pow(L / (orbit * orbit), 0.25);
+  // Insolation equilibrium temperature (albedo 0.3 — the Earth calibration:
+  // 254.6 K at 1 AU, so the greenhouse below restores Earth to ≈ +15 °C)
+  const teqK = 254.6 * Math.pow(L / (orbit * orbit), 0.25);
 
   // Atmosphere
   let pressure = 0;
@@ -296,9 +297,13 @@ function buildPlanet(
         (kind === "SCORCHED" ? 0.002 : kind === "ICE_WORLD" ? 0.01 : 0.05) +
         rand() * (inHZ ? 2.2 : 0.8) * Math.min(1, massEarth / 0.5);
       const roll = rand();
+      // Free oxygen needs a quiet star: flare activity strips atmospheres,
+      // so garden worlds cluster around LOW/NONE-flare hosts.
+      const o2Threshold =
+        star.flareRisk === "NONE" || star.flareRisk === "LOW" ? 0.55 : 0.15;
       if (kind === "SCORCHED") {
         composition = roll < 0.5 ? "CO₂ / SO₂ TRACE" : "VAPORIZED ROCK TRACE";
-      } else if (inHZ && pressure > 0.25 && roll < 0.14) {
+      } else if (inHZ && pressure > 0.25 && roll < o2Threshold) {
         composition = `N₂ ${(60 + rand() * 25).toFixed(0)}% · O₂ ${(14 + rand() * 11).toFixed(0)}% · AR`;
         breathable = true;
       } else if (roll < 0.45) {
@@ -319,9 +324,14 @@ function buildPlanet(
     composition = "H₂ / HE — NO SOLID SURFACE";
   }
 
-  // Greenhouse + final temperature (Celsius)
+  // Greenhouse + final temperature (Celsius). ΔT ≈ 33 K at 1 atm of
+  // CO₂-equivalent (Earth), scaling as sqrt(p): Mars gains ~3 K at 6 mbar,
+  // Venus saturates. Far from the HZ the greenhouse collapses (nightside CO₂
+  // condensation) — factor 0.45.
   const greenhouse =
-    pressure > 0 ? Math.min(45, 14 * Math.log10(1 + pressure) * (inHZ ? 1 : 0.4)) : 0;
+    pressure > 0
+      ? Math.min(85, 33 * Math.sqrt(pressure) * (inHZ ? 1 : 0.45))
+      : 0;
   const tempC = teqK + greenhouse - 273.15;
   const tempSwingC =
     pressure > 0.4 ? 8 + rand() * 22 : 40 + rand() * 130 + (pressure > 0 ? 0 : 60);
@@ -401,9 +411,20 @@ function buildPlanet(
   if (kind === "ICE_WORLD") score -= 10;
   score = Math.max(2, Math.min(97, Math.round(score)));
 
+  // Free oxygen around a late-K/M dwarf can be abiotic: water photolyzed
+  // during the pre-main-sequence phase, hydrogen lost, O₂ left behind
+  // (Luger & Barnes 2015). The most habitable-looking world may be the one
+  // we must question.
+  const abioticRisk =
+    breathable && star.massSolar < 0.75 ? rand() < 0.65 : false;
+
   const notes: string[] = [];
   if (known) notes.push(known.note);
-  if (breathable) notes.push("Biotic signature — free oxygen detected.");
+  if (breathable && abioticRisk)
+    notes.push(
+      "Free O₂ detected — biotic origin unconfirmed: pre-main-sequence water loss can build abiotic oxygen. Quarantine doctrine until assayed."
+    );
+  else if (breathable) notes.push("Biotic signature — free oxygen detected.");
   if (tidalLock) notes.push("Tidally locked: permanent dayside / nightside.");
   if (!landable) notes.push("No solid surface — colony lander inapplicable.");
   if (waterFraction > 0.25 && tempC > 0) notes.push("Liquid water coverage confirmed.");
@@ -443,6 +464,7 @@ function buildPlanet(
     moons,
     inHabitableZone: inHZ || known?.forceHZ || false,
     tidalLock,
+    abioticRisk,
     notes: notes.join(" "),
     color,
     suitability: score,
@@ -467,6 +489,7 @@ const POTENTIAL: Record<string, number> = {
   habitat: 40,
   life: 27,
   comms: 15,
+  repair: 12,
 };
 
 export function computePrognosis(
@@ -480,6 +503,8 @@ export function computePrognosis(
 
   const planetScore = planet ? planet.suitability : 40;
   const blindPenalty = hasSurvey ? 0 : 10;
+  const hasScienceLander = equipment.some((e) => e.id === "science");
+  const abiotic = planet?.abioticRisk ?? false;
 
   const factors = [
     { label: "PLANET SUITABILITY", value: planetScore * 0.55, max: 55 },
@@ -494,6 +519,16 @@ export function computePrognosis(
     { label: "COMMS / NAV", value: (sum("comms") / POTENTIAL.comms) * 4, max: 4 },
     { label: "SCIENCE PROGRAM", value: (sum("science") / POTENTIAL.science) * 5, max: 5 },
     { label: "SURVEY DATA", value: hasSurvey ? 3 : -3, max: 3 },
+    { label: "REPAIR & RECOVERY", value: (sum("repair") / POTENTIAL.repair) * 4, max: 4 },
+    ...(abiotic
+      ? [
+          {
+            label: "BIO-SIGNATURE RESOLVE",
+            value: hasScienceLander ? 2 : -6,
+            max: 3,
+          },
+        ]
+      : []),
   ];
 
   let score = factors.reduce((a, f) => a + f.value, 0);

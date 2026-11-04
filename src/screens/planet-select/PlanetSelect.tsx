@@ -208,6 +208,12 @@ export function PlanetSelect({
                   </div>
                 )}
 
+                {planet.abioticRisk && hasProbe && (
+                  <div className="hal-mono mb-3 border border-amber-400/40 bg-amber-400/10 p-2.5 text-[10px] leading-relaxed text-amber-200">
+                    ⚠ FREE O₂ — ORIGIN UNRESOLVED. Around M dwarfs, pre-main-sequence water loss can build abiotic oxygen (Luger &amp; Barnes 2015). A science lander's sealed bio-cabinet resolves biotic vs abiotic within 200 days of landfall. Until then: quarantine doctrine — suits sealed, no open-cycle life support.
+                  </div>
+                )}
+
                 <DataRow label="ORBIT" value={`${planet.orbitAu.toFixed(3)} AU`} />
                 <DataRow label="MASS" value={`${planet.massEarth.toFixed(2)} M⊕`} />
                 {hasProbe ? (

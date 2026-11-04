@@ -33,6 +33,7 @@ export function MissionProfile({
   const [finalStage, setFinalStage] = useState(0);
   const prognosis = computePrognosis(planet, star, equipment, hasProbe);
   const mass = equipment.reduce((a, e) => a + e.massT, 0);
+  const hasScience = equipment.some((e) => e.id === "science");
 
   const gradeColor =
     prognosis.score >= 78
@@ -93,6 +94,13 @@ export function MissionProfile({
                     ) : (
                       <div className="text-amber-300/80">
                         SURFACE CONDITIONS UNKNOWN — BLIND LANDING
+                      </div>
+                    )}
+                    {planet.abioticRisk && hasProbe && (
+                      <div className={hasScience ? "text-phos/80" : "text-amber-300/80"}>
+                        {hasScience
+                          ? "FREE O₂ UNRESOLVED — SCIENCE LANDER ABOARD FOR ASSAY"
+                          : "FREE O₂ UNRESOLVED — QUARANTINE DOCTRINE, NO BIO-CABINET ABOARD"}
                       </div>
                     )}
                   </div>

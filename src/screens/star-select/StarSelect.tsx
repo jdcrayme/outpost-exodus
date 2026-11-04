@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { FlareRisk, StarSystem } from "@/lib/mission/types";
-import { STARS, transitYears } from "@/lib/mission/stars";
+import { STARS, transitYears, interceptSolution } from "@/lib/mission/stars";
 import { HudPanel, DataRow, HudButton } from "@/components/common/HudPanel";
 import { Starfield3D } from "./Starfield3D";
 import { halcyonAudio } from "@/lib/mission/audio";
@@ -144,6 +144,14 @@ export function StarSelect({
                 value={`${star.luminositySolar.toFixed(4)} L☉`}
               />
               <DataRow label="COMPANIONS" value={star.companions} />
+              <DataRow
+                label="PROPER MOTION"
+                value={`${(interceptSolution(star).pmMasYr / 1000).toFixed(2)}″ / YR · ${interceptSolution(star).vtKms.toFixed(0)} KM/S`}
+              />
+              <DataRow
+                label="INTERCEPT LEAD"
+                value={`${Math.round(interceptSolution(star).aimAu).toLocaleString()} AU · ${interceptSolution(star).leadAngleDeg.toFixed(2)}°`}
+              />
               <DataRow
                 label="FLARE CLASS"
                 value={star.flareRisk}
