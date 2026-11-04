@@ -230,13 +230,32 @@ The mission is not a landing with support infrastructure; it is an
 branch office down a gravity well. The survey campaign exists to tell us
 which well, and whether.
 
-### 5.1 Campaign waves — what is sent, and when
+### 5.1 The physics of arriving first — campaign waves
+
+Three velocity facts constrain every probe plan:
+
+1. **Everything released in cruise shares the ship's 0.100 c.** A coaster
+   given +0.1 % c of separation Δv in year 3 arrives ~5 months ahead at
+   Proxima; a 25-year lead needs 0.135 c, and 0.135 c needs a torch —
+   69 % of the stage is propellant (mass ratio 3.2 at our 0.116 c exhaust).
+   The ship carries one spare torch stage, which is why there is exactly
+   one pre-arrival surveyor, not ten.
+2. **The magsail brakes the ship, not her offspring.** Probes without
+   sails of their own cross the system at whatever speed they arrive
+   with. A free flyby at 4,000 km/s (post-brake, pre-capture) is a
+   spectrometer's business, not a camera's.
+3. **After capture, everything is cheap again.** A bound orbit at ~40 km/s
+   makes the ship a mothership: belt rendezvous costs single-digit km/s,
+   small-body hops cost metres per second — only the wells are expensive
+   again (5.3).
+
+The waves, constrained accordingly:
 
 | Wave | When | What | Data it returns |
 | --- | --- | --- | --- |
 | 0 — Precursors | 2060s–90s, Earth-launched (canon) | Gram-scale laser sail swarms + precursor interferometry | the coarse system data on the STAR screen — this is where "known worlds" come from; mass/orbit only |
-| 1 — The courier | 2098, ship-launched at Jovian departure | The VLBI probe (120 t on a ~380 t torch stage, 0.135 c — it has its OWN exhaust and magsail) | survey-grade imagery from a captured orbit, arriving ~25–30 yr ahead of the ship; its laser downlink overtakes us years before arrival |
-| 2 — The micro-swarm | launched from the ship during transit (years 3–10) | The table below — small coasters, one instrument each | one dossier layer per probe, resolving on approach |
+| 1 — The courier | 2098, ship-launched at Jovian departure | The VLBI probe (120 t on a ~380 t torch stage, 0.135 c — its OWN exhaust, its OWN magsail) | survey-grade imagery from a captured orbit — **≈25 yr of survey lead at Proxima, ≈45 yr at τ Cet** (the lead grows with distance); its downlink reaches the ship decades before arrival |
+| 2 — Corridor & approach | corridor scouts: released in transit, riding a fraction of a km/s ahead for decades; flyby coasters: released on final approach | small coasters, one instrument each (table below) | scouts sample the braking corridor before the ship reaches it — **the magsail deployment point is set from measured ISM density, not an atlas** (a factor-2 density error turns the 24.7-yr brake into 12 or 49 yr; the reserve, or the calendar, pays the difference). Coasters cross the outer system at 4,000 km/s: spectra, particles, dust |
 | 3 — Arrival infrastructure | system entry, before any surface contact | SEED-robotics: relay constellation, ISRU survey crawlers on the chosen moon/asteroid | the comms/power backbone for everything after |
 
 What Wave-2 colonists actually want, mapped to real instrument classes:
@@ -256,81 +275,187 @@ certainty vs cargo is the trade. Wave-2 results can **contradict the courier**
 buy *certainty*, not just data. Land blind and every unknown becomes a
 colony-start risk event drawn from the seed.
 
+**The campaign clock.** After CAPTURE the mission gains a CAMPAIGN phase —
+0–15 yr, player-set. HALCYON and the SEED robots can run the probes alone,
+but the charter requires human sign-off for landfall, and the command watch
+(3) wakes at system entry young, aging one second per second. Campaign
+years are the only resource aboard that cannot be remanufactured. The 204
+sleep on — each early thaw carries risk scaled by years in transit (§4).
+
 ### 5.2 Where the hardware goes — destinations by what they're for
 
 The system survey isn't "scan the planet"; it's an infrastructure survey.
 Specialized assets go to specialized places:
 
-- **Gas giant (if present)** — the volatiles & fuel depot: He-3 skimming for
-  the next generation of ships, radiation-belt mapping (hazard), icy moons
-  (water, organics). A cold Jupiter like ε Ind b is a gift: it shepherds the
-  small bodies into reachable families.
+- **Gas giant (if present)** — the volatiles & fuel depot: He-3 skim passes
+  at perijove (decade-scale collection for the *next* ship's torch),
+  radiation-belt mapping first (hazard), icy moons (water, organics). A
+  cold Jupiter like ε Ind b is a gift twice over: it shepherds the small
+  bodies into reachable families, and a retrograde gravity pass can shed
+  the last km/s of arrival free — capture without spending the reserve.
 - **Asteroid belts / debris disks** (ε Eri is the archetype) — metals,
-  feedstock, low-Δv industry. The first factory goes here, not on the planet.
-- **Icy moons & comets** — water and propellant. Every kilogram of shielding
-  and reaction mass that doesn't come up a gravity well.
+  feedstock, low-Δv industry: rendezvous from the capture orbit is
+  single-digit km/s, and a 300-m rock has ~0.2 m/s of escape velocity —
+  hopping between belt bodies is cheaper than walking. The first factory
+  goes here, not on the planet.
+- **Icy moons & comets** — water and propellant. One kilometre-class ice
+  body (r ≈ 500 m, 0.6 g/cm³) holds ~3×10⁸ t of volatiles: the depot
+  problem is choice, not scarcity. Every kilogram of shielding and
+  reaction mass that doesn't come up a gravity well.
 - **The scorched inner world** — beamed-power site: thin atmosphere, brutal
   insolation, nobody lives there, and it can beam power anywhere in-system.
 - **L4/L5 & high orbits of the HZ world** — the relay constellation, staging
-  depots, the quarantine station (see 5.5).
+  depots, the quarantine station (5.4, T5).
 - **The HZ world itself** — last, not first. Sealed bio-assay before any
   open-cycle contact (the abiotic-O₂ branch, engine.ts REV F).
 
-### 5.3 The orbital-first doctrine
+### 5.3 The orbital-first doctrine — the well, priced
 
 The user-facing thesis: **stay out of the well until the well is worth it.**
-Surface-to-orbit costs 8–9 km/s every round trip; asteroid rendezvous from
-interplanetary arrival costs a fraction of that, and nothing you build in
-orbit falls down. Consequences for the game:
+
+- An Earth-class well taxes ~9–10 km/s up; a chemical round trip is a
+  **~90:1 mass ratio per kilogram returned**.
+- The τ Cet super-Earths (3.9 M⊕, 1.65 R⊕ ⇒ 1.45 g, v_esc ≈ 17 km/s) tax
+  ~15 km/s up, ~30 km/s round trip: **~1,000:1 per kilogram returned**.
+  On such worlds the surface is an embassy, not a suburb — and τ Cet is
+  the *textbook G-twin* of the catalog. The wells are deeper than the
+  romance.
+- Nothing you build in orbit falls down; everything you land stays landed
+  until you pay again.
+
+Consequences for the game:
 
 - The SEED lander stays mandatory for the *surface branch* but the
   **PLANET screen becomes a DESTINATION screen**: a world, a moon, or an
   orbit is a valid target.
 - **The Exodus never lands.** She is the founding orbital asset — the
   reactor, the machine shop, the genetic archive, and the only hull rated
-  for the interstellar medium. Parking her in a graveyard orbit is doctrine.
+  for the interstellar medium. Parking her in a graveyard orbit is
+  doctrine; her 34 km² of droplet curtain, oversized forever once the
+  torch went cold, is the foundry's first heat-rejection asset.
 - Surface packages become *exports* from orbital industry, not imports
   from orbit: the first thing the asteroid factory builds is the landing
   gear for everything after it.
 
-### 5.4 Spacers — the crew who refuse the well
+### 5.4 The build order — what stands on what
+
+Each tier consumes survey layers (5.1–5.2) and unlocks the next. The
+player is scheduling an economy, not placing buildings:
+
+| Tier | What stands | Consumes | Unlocks |
+| --- | --- | --- | --- |
+| T0 | the capture orbit itself | magsail + reserve (already flown) | the ship as mothership: reactor, machine shop, archive, surplus radiator area |
+| T1 | nav & comms backbone | navbeacon + commsat (exist) | automation radius; the Earth-link home — the final archive broadcast, still arriving years after it was sent |
+| T2 | propellant depot at a comet or ice moon | refinery kit (exists) + electrolysis | everything after gets cheap: tugs, cheap insertions, return legs |
+| T3 | belt foundry | SEED lander — landed on the *asteroid* (the twist: SEED's first landing is a rock, not the world) | structural mass, beam extrusion, the landing gear for everything that follows |
+| T4 | beamed power + flare watch | SPS (exists); L1 sentinel (proposed, 5.9) | surface ops without reactor-first; minutes-class flare warning — enough to safe electronics, not enough to move people (light 24 s, particles ~2 min at 0.05 AU): on flare worlds, habitation is buried, permanently |
+| T5 | quarantine station at L4/L5 | the science lander's bio-cabinet, relocated to orbit | the abiotic-O₂ verdict **before** landfall; orbital sample-return assay — touching nothing until the question is answered |
+| T6 | the surface branch | T1–T5 + a certified site | the colony proper |
+| T7 | the second ship | He-3 bank + foundry output + the 48-kt question (5.5) | Exodus II — or not |
+
+### 5.5 Spacers — the void-born
 
 Some fraction of the 207 will elect never to make planetfall even when it's
 available: the shipyard crews, the refinery watch, the relay maintainers —
 and their children, who will be multigenerational by simple arithmetic
-(Proxima-class transits are 60–140 yr; the colony's second generation is
-born in orbit regardless). Design consequences:
+(transits are 63–140 yr; the colony's second generation is born in orbit
+regardless of doctrine). Design consequences:
 
 - The crew manifest gains an **allocation question** (surface vs orbital
   cohort split), sharing UI language with the payload budget.
 - Population genetics quietly favors the split: two semi-isolated
-  populations (orbital + surface) exchange migrants and keep a much larger
-  effective population than either alone.
-- HALCYON gets a line about it, because of course he does.
+  populations exchanging migrants hold a much larger effective population
+  than either alone. With the 2.1M-embryo vault aboard, the living
+  population sizes itself for **culture and skills**, not genes — but the
+  heavy-industry cohort is seventeen people, and that fact is
+  load-bearing.
+- **The gravity referendum.** The spin habs' g-level is a constitutional
+  constant, re-voted: 1.0 g keeps the children planetfall-capable and
+  costs structural mass; 0.4 g is cheap and permanent — spacer bones make
+  the choice for the next generation. The vote recurs because the
+  consequences don't.
+- **The Δv toll.** Everything the surface branch consumes rides orbital
+  logistics — reaction mass, spares, beamed power — and the void-born hold
+  that choke point without firing a shot. But the surface holds the
+  volume, the heat sinks and the sky. Interdependence, not dominance:
+  that is the stable political shape, and the event table should price
+  departures from it (embargo, defection, migration treaties).
+- **The archive custody.** The gene vault (2.1M embryos): shipboard, where
+  the void-born hold the future as leverage, or down the well, where the
+  surface majority claims it. A vote, not a battle.
+- **The 48,000-tonne question.** Break the Exodus for refined colony mass
+  — the surface windfall — or keep her sovereign: the orbital capital, the
+  reactor, the only hull rated for the ISM, and the seed of Exodus II.
+  HALCYON: *"She has carried us for a hundred and forty years. Whether she
+  is a ship or a quarry is above my clearance."*
+- HALCYON, on the census: *"The manifest lists two hundred and seven
+  destinations, Commander. The ship is one of them."*
 
-### 5.5 What the player is managing (the tradeoff graph)
+### 5.6 What the player is managing (the tradeoff graph)
 
 - **Certainty vs mass** — probes and assay capability against tonnes of
   colony. (Live today: VLBI, science lander.)
+- **Campaign years vs command career** — the clock of 5.1: survey depth is
+  bought with the only irreplaceable resource aboard.
 - **Redundancy vs margin** — shipshop + torpor reserve batteries vs more
   of everything else; the transit-events system prices the choice.
-- **Surface vs orbital** — where the industrial mass goes (5.3).
-- **Present vs future** — He-3 from the gas giant only matters if someone
-  builds the second ship. The endgame question: does this colony launch
-  its own Exodus?
-- **Quarantine vs speed** — the abiotic-O₂ world: assay it slowly with a
-  bio-cabinet, or accept the risk and settle fast.
+- **Surface vs orbital** — where the industrial mass goes (5.3), and the
+  cohort split that follows it (5.5).
+- **Present vs future** — the strategic bank: post-capture the tanks hold
+  ~5,280 t of fusion stock ≈ 1.8×10²¹ J — within a factor of one of the
+  2098 impactor (2.2×10²¹ J). A century at ~0.6 TW, or the departure burn
+  of one more ship. He-3 from the gas giant only matters if someone
+  builds her.
+- **Quarantine vs speed** — the abiotic-O₂ world: assay slowly from orbit
+  (T5 — costly, safe), land the bio-cabinet (cheaper, riskier), or accept
+  the risk and settle fast.
 
-### 5.6 How the plan changes by system (the payoff)
+### 5.7 What is found — the survey reveals
+
+Space is not filler between the star and the planet; it is where the
+colony's balance sheet lives. Finds are seeded per system and **gated by
+having sent hardware to the right place** — no cryobot, no ocean:
+
+| Find | Where | Gated by | Payoff |
+| --- | --- | --- | --- |
+| the good belt | ore assay (ε Eri-class) | mapper + volatiles orbiter | foundry site (T3) |
+| a cometary family | the halo, stirred by a giant or the binary | corridor & flyby spectra | the depot (T2) |
+| a subsurface ocean | Europa-analog ice moon | cryobot (proposed) | bio question no. 2 — the quarantine doctrine applies twice |
+| He-3 concentration | the giant's perijove passes | skim-return hardware (proposed) | the second-ship option (T7) |
+| the O₂ verdict | the HZ world | bio-cabinet / orbital sample return | +2 / −6 (live today) |
+| microfossils in a carbonaceous chondrite | a D-type in the belt | science lander on that body | pure science — and the panspermia question, forever open |
+| an interstellar capture | the belt, if the seed is kind | mapper | someone else's leftovers, older than the system — the best museum piece in reach |
+| stable resonance parking orbits | orbital-mechanics survey | HALCYON, free | real estate: the relays and the quarantine station go here |
+
+### 5.8 How the plan changes by system (the payoff)
 
 | System archetype | Example | The plan bends toward |
 | --- | --- | --- |
-| Flare M dwarf | Proxima, Wolf 359 | orbital + terminator-string outposts; shielding mass over lander mass; SPS over surface solar |
-| Quiet M/K dwarf | Ross 128, Lacaille 9352, ε Ind | cheap surface branch possible; still assay-first (abiotic O₂ risk is highest here) |
-| G-twin | τ Cet, α Cen A | the textbook surface-first case — if the debris disk cooperates |
-| Young dusty K dwarf | ε Eri | asteroid industry first; dust-hardened relays; the best factory site in the catalog |
-| Giant-bearing system | ε Ind, ε Eri | volatiles economy; He-3 option; radiation-belt survey before anything else |
-| No viable world at all | (possible) | pure orbital colony — the free-fort; the PLANET screen's honest answer is "none of these, take the belt" |
+| Flare M dwarf | Proxima, Wolf 359, L 726-8 | orbital + terminator-string outposts; shielding mass over lander mass; SPS over surface solar; buried habitation is permanent, not drilled when the sentinel screams (minutes of warning safes electronics only). Proxima alone has a warranty: α Cen A is 0.2 ly on — two years for a *refuelled* vessel, if the He-3 bank ever fills |
+| Quiet M/K dwarf | Ross 128, Lacaille 9352, ε Ind | cheap surface branch possible; still assay-first (abiotic-O₂ risk is highest here); ε Ind's cold Jupiter is the free capture assist |
+| G-twin | τ Cet, α Cen A | the textbook surface-first case — except the τ Cet wells cost ~1,000 kg of rocket per kg returned, the metal-poor belt is lean and the comets are fat: the orbital colony par excellence |
+| Young dusty K dwarf | ε Eri | asteroid industry first; dust-hardened relays; Whipple margin starts lower and the event table knows it; the best factory site in the catalog; Ægir's belts mapped before any moon ops |
+| Giant-bearing system | ε Ind, ε Eri | volatiles economy; He-3 option; radiation-belt survey before anything else; retrograde gravity capture to spare the reserve |
+| Wide-hot primary | Sirius, Procyon | big hot HZ at 2.6–5 AU; UV-hardened everything; Procyon's HZ is walking outward on megayear scales — buy real estate for the tenant you will become |
+| Old binary | 61 Cyg | two snow lines, a stirred comet halo (volatiles and strike hazard on one bill); 2,706-AU aim lead; resonance parking in the perturbation gaps |
+| No viable world at all | (possible) | pure orbital colony — the free-fort; the DESTINATION screen's honest answer is "none of these, take the belt" |
+
+### 5.9 Code hooks — what exists, what is proposed
+
+| Design element | Status | Hook |
+| --- | --- | --- |
+| Wave 1 courier | **live** | equipment `vlbi` (`survey: true`) → dossier layers, prognosis SURVEY DATA ±3 |
+| Wave 3 backbone | **live** | equipment `commsat`, `navbeacon`; SEED + refinery seed T2–T3 |
+| Transit attrition | **live** | `events.ts` — the shipshop / reserve-battery branches |
+| Corridor scout cluster | proposed | equipment ~15 t: measured ISM density → magsail-trim event variants, softer ISM event |
+| Flyby coaster cluster | proposed | equipment ~12 t: approach dossier layers on outer bodies |
+| Survey package (mapper / penetrator / volatiles orbiter) | proposed | equipment ~40 t: campaign-time dossier resolution, courier contradictions per 5.1 |
+| Cryobot melt probe | proposed | equipment ~10 t: ice-moon find (5.7) |
+| He-3 skim return | proposed | equipment ~40 t: T7 unlock |
+| L1 flare sentinel | proposed | equipment ~8 t: M-dwarf radiation easing (minutes-class warning) |
+| CAMPAIGN phase 0–15 yr | proposed | phase machine + command-watch aging state; drives the 5.7 reveal schedule |
+| DESTINATION screen | proposed | PLANET screen generalization: world / moon / orbit / belt targets |
+| Cohort split + ballots | proposed | crew screen allocation; endgame votes: gravity referendum, archive custody, the 48-kt question |
 
 ---
 

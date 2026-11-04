@@ -97,7 +97,7 @@ const KNOWN_WORLDS: Record<string, KnownWorld[]> = {
       radiusKm: 10500,
       designation: "e",
       forceHZ: true,
-      note: "Candidate super-Earth. If rocky, surface gravity ≈1.7 g.",
+      note: "Candidate super-Earth. If rocky, surface gravity ≈1.45 g — the well is deep.",
     },
     {
       orbitAu: 1.334,
