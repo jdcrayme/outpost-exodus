@@ -2,42 +2,29 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { INK_RGBA, paintFace, type Ink } from "@/lib/mission/portraits";
+import { paintFace } from "@/lib/mission/portraits";
 import type { CrewMember } from "@/lib/mission/crew";
 
 // ─── Portrait — the mustered photograph, read off the member seed ────────────
 // The dossier plate is a 48×48 canvas shown at 2× with nearest-neighbor
 // upscale; on selection it reveals top-to-bottom with a phosphor read cursor,
 // like a file coming off tape — the draw-on language, applied to raster.
-// Roster rows use the dedicated 16×16 composition on its own tiny canvas
-// (207 rows × 256 px is nothing; no cache, no data URLs, no SSR dance).
+// REV D: the plate is painted in real colors (RGBA out of the painter); the
+// instrument around it stays ivory-on-black — a color print in a monochrome
+// file. Roster rows use the dedicated 16×16 composition on its own tiny
+// canvas (207 rows × 1 KiB is nothing; no cache, no data URLs, no SSR dance).
 // Reduced motion → the plate paints instantly.
 
 const REVEAL_MS = 340;
 
 function drawGrid(
   ctx: CanvasRenderingContext2D,
-  grid: Uint8Array,
+  px: Uint8Array,
   size: number,
   rows: number
 ) {
   const img = ctx.createImageData(size, size);
-  const d = img.data;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const ink = grid[y * size + x] as Ink;
-      const i = (y * size + x) * 4;
-      if (ink) {
-        const [r, g, b] = INK_RGBA[ink];
-        d[i] = r;
-        d[i + 1] = g;
-        d[i + 2] = b;
-        d[i + 3] = 255;
-      } else {
-        d[i + 3] = 0; // empty — the panel shows through
-      }
-    }
-  }
+  img.data.set(px.subarray(0, rows * size * 4)); // reveal: rows 0..rows
   ctx.clearRect(0, 0, size, size);
   ctx.putImageData(img, 0, 0, 0, 0, size, Math.max(1, Math.min(size, rows)));
 }

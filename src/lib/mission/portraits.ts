@@ -6,43 +6,52 @@
 // this layer reads the same bits as a mustered photograph. The Elite (1984)
 // commander-face homage, grown up.
 //
-// Layer stack (DESIGN_NOTES §4, REV B). Every layer draws from its own RNG
+// REV D — the photograph is in color. REV B painted skin as 1-bit Bayer
+// dither density and REV C calibrated that curve, but a 48×48 plate at 2×
+// sits below the fusion threshold where a dither field reads as tone — it
+// reads as texture, and no calibration fixes that. The eye was right both
+// times. So tone now comes from pigment: skin, hair and eyes draw from the
+// human gamut as real RGB, shaded by a small light model (lit T-zone,
+// shadowed jaw, rim one step lighter). The instrument stays what it was —
+// panels, text and line drawings remain 1-bit ivory-on-black — and the
+// photograph becomes the one object on the ship that shows the world's
+// actual colors, a color print stapled into a monochrome file. The only
+// synthetic colors on the plate are live data: phos collar pips and cryo
+// sensors, the amber watch braid.
+//
+// Layer stack (DESIGN_NOTES §4, REV D). Every layer draws from its own RNG
 // stream keyed off the member seed, so re-curating one layer can never shift
 // another — the address-keyed discipline of the roster, applied to faces:
 //
-//   uniform + collar  role-driven, and the only color: phos pips for the
-//                     core eight functions, a phos bar for the cohort
-//                     senior, an amber braid for the watch of three. Your
-//                     function is live data.
+//   uniform + collar  role-driven live data: phos pips for the core eight
+//                     functions, a phos bar for the cohort senior, an amber
+//                     braid for the watch of three. Your function is live
+//                     data, and it is the only synthetic color left.
 //   head              six silhouettes × width jitter.
-//   skin              tone as Bayer-4 dither density in ivory-on-black — the
-//                     §7 open question, resolved: the file stays 1-bit, and
-//                     skin reads like a photograph scanned through the same
-//                     monochrome instrument as the rest of the UI. Tone
-//                     draws from the full human range uniformly, for
-//                     everyone; nothing keys off name, origin or region.
-//                     REV C: the uniform draw passes through a perceptual
-//                     transfer curve (u^1.45) — a linear density mapping
-//                     washed the whole roster white at 2× pixel fusion,
-//                     because a 35–50% ivory dither on black reads light.
-//                     The curve spends the range where the eye actually
-//                     spends it: dark tones get the density room.
-//   features          eyes ×5 · brows ×4 · nose ×4 · mouth ×6 — polarity
-//                     ink: ivory lines carved on dark tones, black cuts on
-//                     light ones, so features always contrast the field.
-//   hair              18 styles, presentation-lean libraries (most styles
-//                     are offered to everyone); salt stipple and age lines
-//                     scale with the record's age, not the seed — a 58-year
-//                     senior must read older than a 24-year-old fill.
+//   skin              a uniform draw along a seven-anchor human ramp (deep
+//                     brown → pale), shaded by the light model. The draw
+//                     spans the full range uniformly, for everyone; nothing
+//                     keys off name, origin or region.
+//   features          eyes ×5 — sclera, a weighted iris gamut (browns
+//                     common; hazel, blue, green, grey real but rarer),
+//                     pupil, lash line — · brows ×4 in a hair-darkened ink ·
+//                     nose ×4 and mouth ×6 in tones mixed from the skin.
+//                     Hue carries the contrast; the REV B polarity inks and
+//                     feature halos are gone.
+//   hair              18 styles × a weighted human color table (black and
+//                     browns common, blonde, auburn, ginger), rim in a
+//                     lighter hair step, grey salt scaled by the record's
+//                     age.
+//   age lines         density from the member's actual age — the dossier
+//                     reads the file, not the seed.
 //   cryo marks        phos sensor pair at the temples, worn by every cohort
 //                     member; the watch of three wears none. One pixel pair
 //                     that says "this person is frozen".
 //
 // One FaceSpec per member (every decision, scale-independent) with two
 // compositions: paint48 — the dossier plate — and paint16 — the roster
-// thumbnail. Pixel art at 16 px is a dedicated composition, never a
-// downscale. Collisions between faces are allowed (Elite had them); scarcity
-// is not.
+// thumbnail, solid colors at icon scale, never a downscale. Collisions
+// between faces are allowed (Elite had them); scarcity is not.
 //
 // Doctrine, asserted at module load: spec determinism, painter purity
 // (sampled), role→collar totality — a new role without a collar class throws
@@ -58,16 +67,94 @@ import {
   type CrewMember,
 } from "./crew";
 
-// ── Ink — the photograph is 1-bit, plus the two live-data colors ─────────────
+// ── Color — RGB triples, the live-data accents, small helpers ────────────────
 
-export type Ink = 0 | 1 | 2 | 3; // 0 empty · 1 ivory · 2 phos · 3 amber
+export type RGB = readonly [number, number, number];
 
-export const INK_RGBA: Record<Ink, [number, number, number]> = {
-  0: [3, 3, 4], // empty — the panel shows through
-  1: [232, 230, 220], // ink ivory
-  2: [123, 235, 166], // phos — live data
-  3: [245, 199, 106], // amber — the watch braid (photograph-only accent)
-};
+/** Phosphor — live data. Synthetic, and it stays synthetic. */
+export const PHOS: RGB = [123, 235, 166];
+/** Amber — the watch braid, the one warm accent of the instrument. */
+export const AMBER: RGB = [245, 199, 106];
+
+function shade(c: RGB, f: number): RGB {
+  return [
+    Math.min(255, Math.round(c[0] * f)),
+    Math.min(255, Math.round(c[1] * f)),
+    Math.min(255, Math.round(c[2] * f)),
+  ];
+}
+
+/** Lighten with an additive floor, so even black hair keeps a visible rim. */
+function lift(c: RGB, f: number, floor: number): RGB {
+  return [
+    Math.min(255, Math.round(Math.max(c[0] * f, c[0] + floor))),
+    Math.min(255, Math.round(Math.max(c[1] * f, c[1] + floor))),
+    Math.min(255, Math.round(Math.max(c[2] * f, c[2] + floor))),
+  ];
+}
+
+function mix(a: RGB, b: RGB, t: number): RGB {
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * t),
+    Math.round(a[1] + (b[1] - a[1]) * t),
+    Math.round(a[2] + (b[2] - a[2]) * t),
+  ];
+}
+
+// ── The human gamut — seven skin anchors, weighted hair and iris tables ──────
+// Anchors are measured muted, not the orange of cheap palettes; the uniform
+// draw along the ramp is a social policy, not a statistic — everyone draws
+// from the whole range.
+
+export const SKIN_RAMP: RGB[] = [
+  [64, 42, 28], // deep brown
+  [94, 63, 42], // brown
+  [124, 86, 57], // tan brown
+  [158, 114, 80], // medium / olive
+  [192, 145, 108], // light medium
+  [222, 175, 138], // light
+  [244, 213, 183], // pale
+];
+
+function skinAt(u: number): RGB {
+  const t = Math.min(0.9999, Math.max(0, u)) * (SKIN_RAMP.length - 1);
+  const i = Math.min(SKIN_RAMP.length - 2, Math.floor(t));
+  return mix(SKIN_RAMP[i], SKIN_RAMP[i + 1], t - i);
+}
+
+export const HAIR_COLORS: { name: string; c: RGB; w: number }[] = [
+  { name: "black", c: [26, 20, 16], w: 28 },
+  { name: "dark brown", c: [48, 32, 20], w: 24 },
+  { name: "brown", c: [76, 50, 28], w: 16 },
+  { name: "chestnut", c: [104, 66, 36], w: 9 },
+  { name: "auburn", c: [122, 60, 32], w: 6 },
+  { name: "ginger", c: [156, 82, 44], w: 3 },
+  { name: "dark blonde", c: [126, 98, 60], w: 6 },
+  { name: "blonde", c: [184, 152, 100], w: 5 },
+  { name: "light blonde", c: [216, 196, 156], w: 3 },
+];
+
+export const IRIS_COLORS: { name: string; c: RGB; w: number }[] = [
+  { name: "dark brown", c: [48, 32, 22], w: 26 },
+  { name: "brown", c: [92, 60, 34], w: 32 },
+  { name: "hazel", c: [128, 94, 50], w: 12 },
+  { name: "amber", c: [168, 118, 60], w: 5 },
+  { name: "green", c: [86, 112, 78], w: 6 },
+  { name: "blue", c: [96, 132, 172], w: 13 },
+  { name: "grey", c: [126, 130, 134], w: 6 },
+];
+
+/** Weighted index draw from a table — deterministic in the stream. */
+function wpick(r: () => number, table: { w: number }[]): number {
+  let total = 0;
+  for (const t of table) total += t.w;
+  let x = r() * total;
+  for (let i = 0; i < table.length; i++) {
+    x -= table[i].w;
+    if (x < 0) return i;
+  }
+  return table.length - 1;
+}
 
 // ── Collar classes — the uniform reads the role, total by assertion ─────────
 
@@ -177,17 +264,18 @@ function hwAt(
 export interface FaceSpec {
   head: number; // 0–5
   headScale: number; // 0.92–1.08 half-width jitter
-  skin: number; // 0.08–0.92 dither density (perceptual curve, REV C)
+  skinU: number; // 0–1, position along the human skin ramp (uniform draw)
   hair: string; // style id, from the presentation-filtered library
-  hairTone: number; // 0.06–0.72 dither density
+  hairCIdx: number; // HAIR_COLORS index, weighted draw
+  irisIdx: number; // IRIS_COLORS index, weighted draw
   hairFlip: boolean; // mirror the style (swept side, bun side…)
-  saltSeed: number; // stream seed for grey stipple
+  saltSeed: number; // stream seed for grey salt
   eyes: number; // 0–4
   brows: number; // 0–3
   nose: number; // 0–3
   mouth: number; // 0–5
   ageLines: number; // 0–3, from the record's age — the dossier reads the file
-  hairGrey: number; // salt stipple probability, from age
+  hairGrey: number; // grey salt probability, from age
   collar: CollarClass;
   cryo: boolean; // cohort ≠ 0
 }
@@ -195,21 +283,22 @@ export interface FaceSpec {
 export function buildSpec(m: CrewMember): FaceSpec {
   const rr = (layer: string) =>
     mulberry32((m.seed ^ hashString(`exodus:face:${layer}`)) >>> 0);
+  // stream order is doctrine: geo → skin → features → hair (style, color,
+  // flip) → iris. Re-curating a table never reshuffles an earlier stream.
   const rGeo = rr("geo");
   const rSkin = rr("skin");
   const rFeat = rr("features");
   const rHair = rr("hair");
+  const rIris = rr("iris");
   const lib = HAIR.filter((h) => h.tag === "B" || h.tag === m.sex);
-  const face: FaceSpec = {
+  return {
     head: Math.floor(rGeo() * HEADS.length),
     headScale: 0.92 + rGeo() * 0.16,
-    // perceptual transfer: the draw stays uniform (social policy — the
-    // full human range for everyone); the curve is instrument calibration
-    // so that draw READS. Linear density read all-white at 2× fusion.
-    skin: 0.08 + 0.84 * Math.pow(rSkin(), 1.45),
+    skinU: rSkin(),
     hair: lib[Math.floor(rHair() * lib.length)].id,
-    hairTone: 0.06 + rHair() * 0.66,
+    hairCIdx: wpick(rHair, HAIR_COLORS),
     hairFlip: rHair() < 0.5,
+    irisIdx: wpick(rIris, IRIS_COLORS),
     saltSeed: (m.seed ^ hashString("exodus:face:salt")) >>> 0,
     eyes: Math.floor(rFeat() * 5),
     brows: Math.floor(rFeat() * 4),
@@ -220,17 +309,6 @@ export function buildSpec(m: CrewMember): FaceSpec {
     collar: collarClass(m),
     cryo: m.cohort !== 0,
   };
-  // hair must read as hair — but REV B pushed close tones UP on dark
-  // faces, painting a light cap on every one of them and helping wash the
-  // roster white. REV C separates downward: near-black hair against brown
-  // skin reads by texture (solid sparse-black field vs skin speckle), and
-  // the fringe rim carries the hairline. The floor case (very dark skin)
-  // is rim-carried — still better than a light cap.
-  const span = Math.abs(face.hairTone - face.skin);
-  if (span < 0.15) {
-    face.hairTone = Math.max(0.04, Math.min(face.hairTone, face.skin - 0.15));
-  }
-  return face;
 }
 
 function hairDef(spec: FaceSpec): HairDef {
@@ -239,68 +317,104 @@ function hairDef(spec: FaceSpec): HairDef {
   return def;
 }
 
-// ── Pixel grid — the shared painting surface ─────────────────────────────────
+// ── FaceColors — the derived palette, mixed from the three draws ─────────────
 
-interface Grid {
-  g: Uint8Array;
-  put(x: number, y: number, ink: Ink): void;
-  at(x: number, y: number): Ink;
+export interface FaceColors {
+  skin: RGB;
+  skinLight: RGB; // rim + lit steps
+  skinShadow: RGB; // hoods, temple shade
+  skinLine: RGB; // nose strokes, age lines
+  hair: RGB;
+  hairLight: RGB; // rim — floored so black hair still reads
+  hairSalt: RGB; // the grey, mixed toward the hair so salt blends
+  brow: RGB; // hair-darkened
+  lash: RGB; // darker still — lash lines and icon eyes
+  lip: RGB; // muted, mixed from the skin's own shadow
+  lipLight: RGB; // the lower lip
+  sclera: RGB;
+  iris: RGB;
+  pupil: RGB;
+  cloth: RGB;
+  clothLight: RGB;
 }
 
-function makeGrid(size: number): Grid {
-  const g = new Uint8Array(size * size);
+export function faceColors(spec: FaceSpec): FaceColors {
+  const skin = skinAt(spec.skinU);
+  const hair = HAIR_COLORS[spec.hairCIdx].c;
+  const lip = mix(shade(skin, 0.58), [154, 70, 60], 0.5);
   return {
-    g,
-    put(x, y, ink) {
-      if (x >= 0 && x < size && y >= 0 && y < size) g[y * size + x] = ink;
+    skin,
+    skinLight: lift(skin, 1.22, 14),
+    skinShadow: shade(skin, 0.74),
+    skinLine: shade(skin, 0.58),
+    hair,
+    hairLight: lift(hair, 1.5, 26),
+    hairSalt: mix(hair, [184, 180, 172], 0.85),
+    brow: shade(hair, 0.75),
+    lash: shade(hair, 0.6),
+    lip,
+    lipLight: shade(lip, 1.35),
+    sclera: [238, 234, 226],
+    iris: IRIS_COLORS[spec.irisIdx].c,
+    pupil: [18, 15, 12],
+    cloth: [30, 32, 36],
+    clothLight: [74, 78, 84],
+  };
+}
+
+// ── Surface — the RGBA painting target ───────────────────────────────────────
+
+interface Surface {
+  px: Uint8Array; // RGBA, row-major; alpha 0 = the panel shows through
+  size: number;
+  put(x: number, y: number, c: RGB): void;
+  clear(x: number, y: number): void;
+}
+
+function makeSurface(size: number): Surface {
+  const px = new Uint8Array(size * size * 4);
+  return {
+    px,
+    size,
+    put(x, y, c) {
+      if (x < 0 || x >= size || y < 0 || y >= size) return;
+      const i = (y * size + x) * 4;
+      px[i] = c[0];
+      px[i + 1] = c[1];
+      px[i + 2] = c[2];
+      px[i + 3] = 255;
     },
-    at(x, y) {
-      return x >= 0 && x < size && y >= 0 && y < size ? (g[y * size + x] as Ink) : 0;
+    clear(x, y) {
+      if (x < 0 || x >= size || y < 0 || y >= size) return;
+      const i = (y * size + x) * 4;
+      px[i] = 0;
+      px[i + 1] = 0;
+      px[i + 2] = 0;
+      px[i + 3] = 0;
     },
   };
 }
 
-/** Ordered Bayer 4×4 threshold — position-keyed, so the dither never depends
- *  on draw order. Density is the tone. */
-const BAYER = new Float32Array(
-  [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16)
-);
-
-function dith(x: number, y: number, tone: number): Ink {
-  return tone > BAYER[(y & 3) * 4 + (x & 3)] ? 1 : 0;
-}
-
-/** Rim brightness for a field of tone t: one visible step brighter, never
- *  solid. REV C — the rim used to be unconditionally ivory, which drew a
- *  white band around every head and lit the whole roster from behind. A
- *  dithered step-bright rim holds the silhouette at every tone without
- *  painting anyone in outline-white. */
-function rimTone(t: number): number {
-  return Math.min(0.95, Math.max(0.6, t + 0.2));
-}
-
-/** Stamp a small character pattern. '#'=black slot, 'i'=ivory, 'p'=polarity
- *  ink, '.'=leave alone. Mirrored for the right-hand side of the face. */
+/** Stamp a small glyph. Chars resolve through `inks`; '.' leaves the surface
+ *  alone. Mirrored for the right-hand side of the face. */
 function stamp(
-  grid: Grid,
+  s: Surface,
   x0: number,
   y0: number,
   rows: string[],
-  polarity: Ink,
+  inks: Record<string, RGB>,
   mirror = false
 ) {
   rows.forEach((row, r) => {
     const chars = mirror ? [...row].reverse() : [...row];
     chars.forEach((ch, c) => {
-      if (ch === ".") return;
-      grid.put(x0 + c, y0 + r, ch === "#" ? 0 : ch === "i" ? 1 : polarity);
+      const col = inks[ch];
+      if (col) s.put(x0 + c, y0 + r, col);
     });
   });
 }
 
 // ── The 48×48 dossier plate ──────────────────────────────────────────────────
-
-const CLOTH_TONE = 0.22;
 
 function profile48(spec: FaceSpec) {
   const hd = HEADS[spec.head];
@@ -323,121 +437,115 @@ function profile48(spec: FaceSpec) {
   return p;
 }
 
+// Eye glyphs — s sclera · r iris · p pupil · k lash · d hood shadow.
+// One table for every face: hue carries the contrast, no polarity split.
 const EYES: string[][] = [
-  ["#iii#"], // narrow — bright closed slit
-  ["#####", "##ii#", "#####"], // round — socket pad with a glint
-  ["######", "##ii##", "######"], // wide
-  ["######", "######", "##ii##"], // deep-set — shadowed, glint low
-  ["ii##ii"], // almond — bright corners
-];
-
-/** Eyes for light faces (P = black strokes): small dark eyes with bright
- *  cores — solid dark pads here would read as hollow sockets, and outlined
- *  rectangles as goggles. */
-const EYES_LIGHT: string[][] = [
-  ["#ii#"], // narrow
-  ["#ii#"], // round — a small dark eye, bright core
-  ["#iii#"], // wide
-  ["####", "#ii#"], // deep-set — heavy lid over a bright eye
-  ["ii##ii"], // almond
+  ["krrk"], // narrow — a dark-lidded squint over the iris field
+  ["kkkkk", "srprs"], // round — lash line over sclera, iris, pupil
+  ["kkkkkk", "srpprs"], // wide
+  ["dddddd", "kkkkkk", "srpprs"], // deep-set — heavy hood, eye set low
+  ["drrrrd"], // almond — shaded corners over the iris field
 ];
 
 const BROWS: string[][] = [
-  ["ppppp", ".ppp."], // straight
-  [".ppp.", "p...p"], // arched
-  ["ppppp", "ppppp"], // heavy
-  [".ppp."], // thin
+  ["bbbbb", ".bbb."], // straight
+  [".bbb.", "b...b"], // arched
+  ["bbbbb", "bbbbb"], // heavy
+  [".bbb."], // thin
 ];
 
 function paintEyes48(
-  grid: Grid,
+  s: Surface,
   p: ReturnType<typeof profile48>,
   style: number,
-  P: Ink
+  col: FaceColors
 ) {
-  // light faces get open eyes — dark 3-row pads on a near-white field read
-  // as hollow sockets (the skull trap); dark faces get socket pads, where
-  // the glints carry
-  const table = P === 0 ? EYES_LIGHT : EYES;
-  const rows = table[style] ?? table[0];
+  const rows = EYES[style] ?? EYES[0];
   const w = Math.max(...rows.map((r) => r.length));
+  const inks: Record<string, RGB> = {
+    s: col.sclera,
+    r: col.iris,
+    p: col.pupil,
+    k: col.lash,
+    d: col.skinShadow,
+  };
   // mirror-exact placement: even-width patterns must sit symmetrically
-  stamp(grid, p.cx - p.eyeDX - Math.ceil((w - 1) / 2), p.eyeY, rows, 1, false);
-  stamp(grid, p.cx + p.eyeDX - Math.floor((w - 1) / 2), p.eyeY, rows, 1, true);
+  stamp(s, p.cx - p.eyeDX - Math.ceil((w - 1) / 2), p.eyeY, rows, inks, false);
+  stamp(s, p.cx + p.eyeDX - Math.floor((w - 1) / 2), p.eyeY, rows, inks, true);
 }
 
 function paintNose48(
-  grid: Grid,
+  s: Surface,
   p: ReturnType<typeof profile48>,
   style: number,
-  P: Ink
+  col: FaceColors
 ) {
   const cx = p.cx;
   // every nose carries a solid tip block — coherent blocks read through the
-  // dither, 1px lines do not
+  // shading, 1px lines do not
   const tip = (w: number) => {
-    for (let x = cx - w; x <= cx + w; x++) grid.put(x, p.noseTip, P);
+    for (let x = cx - w; x <= cx + w; x++) s.put(x, p.noseTip, col.skinLine);
   };
   switch (style) {
     case 1: // button
       for (let y = p.eyeY + 3; y < p.noseTip; y++) {
-        grid.put(cx, y, P);
-        grid.put(cx + 1, y, P);
+        s.put(cx, y, col.skinLine);
+        s.put(cx + 1, y, col.skinLine);
       }
       tip(1);
       break;
     case 2: // aquiline — the bump
       for (let y = p.eyeY + 2; y < p.noseTip; y++) {
-        grid.put(cx, y, P);
-        grid.put(cx + 1, y, P);
+        s.put(cx, y, col.skinLine);
+        s.put(cx + 1, y, col.skinLine);
       }
-      grid.put(cx + 2, p.eyeY + 4, P);
+      s.put(cx + 2, p.eyeY + 4, col.skinLine);
       tip(1);
       break;
     case 3: // broad
       for (let y = p.eyeY + 3; y < p.noseTip; y++) {
-        grid.put(cx, y, P);
-        grid.put(cx + 1, y, P);
+        s.put(cx, y, col.skinLine);
+        s.put(cx + 1, y, col.skinLine);
       }
       tip(2);
       break;
     default: // straight
       for (let y = p.eyeY + 2; y < p.noseTip; y++) {
-        grid.put(cx, y, P);
-        grid.put(cx + 1, y, P);
+        s.put(cx, y, col.skinLine);
+        s.put(cx + 1, y, col.skinLine);
       }
       tip(1);
   }
 }
 
 function paintMouth48(
-  grid: Grid,
+  s: Surface,
   p: ReturnType<typeof profile48>,
   style: number,
-  P: Ink
+  col: FaceColors
 ) {
   const cx = p.cx;
   const y = p.mouthY;
   // two-row solid structure — main line plus lower lip — so the mouth
-  // survives mid-tone dither at any polarity
+  // reads at every skin tone
   const line = (w: number) => {
-    for (let x = cx - w; x <= cx + w; x++) grid.put(x, y, P);
+    for (let x = cx - w; x <= cx + w; x++) s.put(x, y, col.lip);
   };
   const lip = (w: number) => {
-    for (let x = cx - w; x <= cx + w; x++) grid.put(x, y + 1, P);
+    for (let x = cx - w; x <= cx + w; x++) s.put(x, y + 1, col.lipLight);
   };
   switch (style) {
     case 1: // smile — corners rise
-      grid.put(cx - 3, y - 1, P);
-      grid.put(cx + 3, y - 1, P);
+      s.put(cx - 3, y - 1, col.lip);
+      s.put(cx + 3, y - 1, col.lip);
       line(2);
       lip(1);
       break;
     case 2: // corners fall
       line(2);
       lip(1);
-      grid.put(cx - 3, y + 1, P);
-      grid.put(cx + 3, y + 1, P);
+      s.put(cx - 3, y + 1, col.lip);
+      s.put(cx + 3, y + 1, col.lip);
       break;
     case 3: // full
       line(2);
@@ -448,10 +556,10 @@ function paintMouth48(
       lip(2);
       break;
     case 5: // smirk
-      for (let x = cx - 2; x <= cx + 1; x++) grid.put(x, y, P);
-      grid.put(cx + 2, y - 1, P);
-      grid.put(cx - 1, y + 1, P);
-      grid.put(cx, y + 1, P);
+      for (let x = cx - 2; x <= cx + 1; x++) s.put(x, y, col.lip);
+      s.put(cx + 2, y - 1, col.lip);
+      s.put(cx - 1, y + 1, col.lipLight);
+      s.put(cx, y + 1, col.lipLight);
       break;
     default: // flat
       line(2);
@@ -461,36 +569,37 @@ function paintMouth48(
 
 /** Age lines read the record: density from the member's actual age. */
 function paintAge48(
-  grid: Grid,
+  s: Surface,
   p: ReturnType<typeof profile48>,
   band: number,
-  P: Ink
+  col: FaceColors
 ) {
   if (band < 1) return;
-  for (let x = p.cx - 2; x <= p.cx + 2; x++) grid.put(x, p.browY - 3, P); // forehead
+  for (let x = p.cx - 2; x <= p.cx + 2; x++) s.put(x, p.browY - 3, col.skinLine); // forehead
   if (band >= 2) {
-    grid.put(p.cx - 3, p.noseTip - 1, P); // nasolabial pair
-    grid.put(p.cx - 4, p.noseTip, P);
-    grid.put(p.cx + 3, p.noseTip - 1, P);
-    grid.put(p.cx + 4, p.noseTip, P);
+    s.put(p.cx - 3, p.noseTip - 1, col.skinLine); // nasolabial pair
+    s.put(p.cx - 4, p.noseTip, col.skinLine);
+    s.put(p.cx + 3, p.noseTip - 1, col.skinLine);
+    s.put(p.cx + 4, p.noseTip, col.skinLine);
     const fx = p.eyeDX + 3; // crow's feet
-    grid.put(p.cx - fx, p.eyeY, P);
-    grid.put(p.cx - fx - 1, p.eyeY - 1, P);
-    grid.put(p.cx + fx, p.eyeY, P);
-    grid.put(p.cx + fx + 1, p.eyeY - 1, P);
+    s.put(p.cx - fx, p.eyeY, col.skinLine);
+    s.put(p.cx - fx - 1, p.eyeY - 1, col.skinLine);
+    s.put(p.cx + fx, p.eyeY, col.skinLine);
+    s.put(p.cx + fx + 1, p.eyeY - 1, col.skinLine);
   }
   if (band >= 3) {
-    grid.put(p.cx, p.browY - 1, P); // glabella
-    grid.put(p.cx, p.browY - 2, P);
-    for (let x = p.cx - 2; x <= p.cx + 1; x++) grid.put(x, 36, P); // neck crease
+    s.put(p.cx, p.browY - 1, col.skinLine); // glabella
+    s.put(p.cx, p.browY - 2, col.skinLine);
+    for (let x = p.cx - 2; x <= p.cx + 1; x++) s.put(x, 36, col.skinLine); // neck crease
   }
 }
 
 function paintHair48(
-  grid: Grid,
+  s: Surface,
   p: ReturnType<typeof profile48>,
   spec: FaceSpec,
-  def: HairDef
+  def: HairDef,
+  col: FaceColors
 ) {
   const S = 48;
   const hw = (y: number) => hwAt(y, p);
@@ -573,8 +682,8 @@ function paintHair48(
     }
   }
 
-  // fill: dither the interior, rim the boundary (a step brighter than the
-  // field — REV C, same rule as the bust rim), salt the grey through
+  // fill: the hair color, a floored-lighter rim on the boundary, grey salt
+  // through the interior at the age-scaled rate
   const salt = mulberry32(spec.saltSeed);
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
@@ -585,51 +694,40 @@ function paintHair48(
         y === 0 ||
         !mask[(y - 1) * S + x] ||
         (y + 1 >= S ? true : !mask[(y + 1) * S + x]);
-      if (b) grid.put(x, y, dith(x, y, rimTone(spec.hairTone)));
-      else grid.put(x, y, dith(x, y, spec.hairTone) === 1 || salt() < spec.hairGrey ? 1 : 0);
+      if (b) s.put(x, y, col.hairLight);
+      else s.put(x, y, salt() < spec.hairGrey ? col.hairSalt : col.hair);
     }
   }
 }
 
-/** Face lighting — subtle density shifts model the head: a lit T-zone
- *  (forehead, nose bridge, cheeks) against a shadowed jaw and neck. This is
- *  what makes a dithered face read as a face instead of noise, at every
- *  tone: dark faces get a lit structure, light faces get form. */
-function faceTone48(
+/** Face lighting — a brightness multiplier per pixel that models the head:
+ *  a lit T-zone (forehead, nose bridge, cheeks) against a shadowed jaw,
+ *  temples and neck. Real colors take shading as naturally as film. */
+function faceLight48(
   x: number,
   y: number,
-  p: ReturnType<typeof profile48>,
-  skin: number
+  p: ReturnType<typeof profile48>
 ): number {
   const dx = Math.abs(x - p.cx);
   const hw = hwAt(Math.min(y, p.chinY), p);
-  let t = skin;
-  // gentle lift everywhere; very light faces keep grain, dark faces get a
-  // faint T-zone — REV B's 0.7 lifted their centers to ~0.35 density and
-  // nobody on the roster read as actually dark. 0.35 keeps the structure
-  // while the field keeps its tone.
-  const lift = skin > 0.75 ? 0.5 : skin < 0.45 ? 0.35 : 0.9;
-  if (y >= p.browY - 4 && y <= p.browY - 2 && dx <= hw - 2) t += 0.18 * lift;
+  let f = 1;
+  if (y >= p.browY - 4 && y <= p.browY - 2 && dx <= hw - 2) f += 0.08; // forehead
   else if (y >= p.eyeY + 3 && y <= p.noseTip - 1) {
-    if (dx <= 1) t += 0.22 * lift; // nose bridge catchlight
-    else if (dx >= 3 && dx <= hw - 2) t += 0.14 * lift; // cheek apples
+    if (dx <= 1) f += 0.12; // nose bridge catchlight
+    else if (dx >= 3 && dx <= hw - 2) f += 0.06; // cheek apples
   }
-  if (skin > 0.4) {
-    // dark faces keep their floor — subtractive shadows would read as void
-    if (y >= p.mouthY + 1 && y <= p.chinY && dx <= hw - 1) t -= 0.12; // chin shadow
-    if (y >= p.eyeY + 2 && y <= p.chinY && dx >= hw - 2.5) t -= 0.1; // temples
-    if (y > p.chinY) t -= 0.08; // neck sits in shadow
-    // soft clearings above and below the eye cluster
-    if ((y === p.eyeY - 1 || y === p.eyeY + 3) && dx <= p.eyeDX + 3) t -= 0.14;
-  }
-  return Math.max(0.05, Math.min(0.95, t));
+  if (y >= p.mouthY + 1 && y <= p.chinY && dx <= hw - 1) f -= 0.1; // chin
+  if (y >= p.eyeY + 2 && y <= p.chinY && dx >= hw - 2.5) f -= 0.07; // temples
+  if (y > p.chinY) f -= 0.08; // neck sits in shadow
+  return f;
 }
 
 function paint48(spec: FaceSpec): Uint8Array {
   const S = 48;
-  const grid = makeGrid(S);
+  const s = makeSurface(S);
   const p = profile48(spec);
   const hw = (y: number) => hwAt(y, p);
+  const col = faceColors(spec);
 
   // ── bust mask: head ∪ neck ∪ shoulders (1 = skin, 2 = cloth) ──
   const mask = new Uint8Array(S * S);
@@ -647,9 +745,8 @@ function paint48(spec: FaceSpec): Uint8Array {
     for (let x = Math.round(p.cx - w); x <= Math.round(p.cx + w); x++) mark(x, y, 2);
   }
 
-  // ── fill: ivory rim on the boundary, dither inside — the drawing holds the
-  //    silhouette at every tone, the dither carries the tone, and the tone
-  //    itself is lit (faceTone48) so the head reads as a head ──
+  // ── fill: skin shaded by the light model, cloth flat, rims one step
+  //    lighter — the silhouette holds without any white outline ──
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       const mk = mask[y * S + x];
@@ -661,100 +758,70 @@ function paint48(spec: FaceSpec): Uint8Array {
         y === S - 1 ||
         !mask[(y - 1) * S + x] ||
         !mask[(y + 1) * S + x];
-      const tone = mk === 1 ? faceTone48(x, y, p, spec.skin) : CLOTH_TONE;
-      grid.put(x, y, edge ? dith(x, y, rimTone(tone)) : dith(x, y, tone));
+      if (mk === 1)
+        s.put(x, y, edge ? col.skinLight : shade(col.skin, faceLight48(x, y, p)));
+      else s.put(x, y, edge ? col.clothLight : col.cloth);
     }
   }
 
-  // collar line — where the neck meets the suit
-  for (let x = p.cx - 5; x <= p.cx + 5; x++) grid.put(x, 42, 1);
-  grid.put(p.cx - 6, 43, 1);
-  grid.put(p.cx + 6, 43, 1);
+  // collar seam — where the neck meets the suit
+  for (let x = p.cx - 5; x <= p.cx + 5; x++) s.put(x, 42, col.clothLight);
+  s.put(p.cx - 6, 43, col.clothLight);
+  s.put(p.cx + 6, 43, col.clothLight);
 
   // ── features, then hair over them, then the sensors ──
-  // fg records every feature pixel so the halo pass can ring them
-  const P: Ink = spec.skin > 0.55 ? 0 : 1; // polarity ink
-  const feat = new Set<number>();
-  const fg: Grid = {
-    g: grid.g,
-    put(x, y, ink) {
-      grid.put(x, y, ink);
-      if (x >= 0 && x < S && y >= 0 && y < S) feat.add(y * 100 + x);
-    },
-    at: grid.at,
-  };
+  const inks: Record<string, RGB> = { b: col.brow };
   const browRows = BROWS[spec.brows] ?? BROWS[0];
   const bw = Math.max(...browRows.map((r) => r.length));
-  stamp(fg, p.cx - p.eyeDX - Math.ceil((bw - 1) / 2), p.browY, browRows, P, false);
-  stamp(fg, p.cx + p.eyeDX - Math.floor((bw - 1) / 2), p.browY, browRows, P, true);
-  paintEyes48(fg, p, spec.eyes, P);
-  paintNose48(fg, p, spec.nose, P);
-  paintMouth48(fg, p, spec.mouth, P);
+  stamp(s, p.cx - p.eyeDX - Math.ceil((bw - 1) / 2), p.browY, browRows, inks, false);
+  stamp(s, p.cx + p.eyeDX - Math.floor((bw - 1) / 2), p.browY, browRows, inks, true);
+  paintEyes48(s, p, spec.eyes, col);
+  paintNose48(s, p, spec.nose, col);
+  paintMouth48(s, p, spec.mouth, col);
 
-  // feature halo — a 1px ring in the ink opposite the strokes. Invisible
-  // when the field already contrasts the glyphs, decisive at mid-tones
-  // where strokes used to dissolve into the dither.
-  const ring: Ink = P === 1 ? 0 : 1;
-  for (const k of feat) {
-    const x = k % 100;
-    const y = Math.floor(k / 100);
-    for (const [nx, ny] of [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-      [x - 1, y - 1],
-      [x + 1, y - 1],
-      [x - 1, y + 1],
-      [x + 1, y + 1],
-    ]) {
-      if (!feat.has(ny * 100 + nx)) grid.put(nx, ny, ring);
-    }
-  }
-
-  // age lines stay subtle — no halo; they are weather, not features
-  paintAge48(grid, p, spec.ageLines, P);
-  paintHair48(grid, p, spec, hairDef(spec));
+  // age lines stay subtle — they are weather, not features
+  paintAge48(s, p, spec.ageLines, col);
+  paintHair48(s, p, spec, hairDef(spec), col);
 
   if (spec.cryo) {
     // on the temple itself — just outside the eye cluster, inside the rim,
     // below every fringe line. 2×2 so they read at plate scale.
     const dx = p.eyeDX + 3;
-    for (const s of [-1, 1]) {
+    for (const sd of [-1, 1]) {
       for (let yy = p.eyeY + 1; yy <= p.eyeY + 2; yy++) {
-        grid.put(p.cx + s * dx, yy, 2);
-        grid.put(p.cx + s * (dx + 1), yy, 2);
+        s.put(p.cx + sd * dx, yy, PHOS);
+        s.put(p.cx + sd * (dx + 1), yy, PHOS);
       }
     }
   }
 
-  // ── the collar reading — the only color on the photograph. Pips sit on
-  //    a cleared patch so they read against the uniform dither ──
+  // ── the collar reading — live data, the only synthetic color. Pips sit
+  //    on a cleared patch so they read against the uniform ──
   const clearRect = (x0: number, y0: number, x1: number, y1: number) => {
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid.put(x, y, 0);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) s.clear(x, y);
   };
   switch (spec.collar) {
     case "WATCH":
       clearRect(p.cx - 5, 42, p.cx + 5, 45);
       for (let y = 43; y <= 44; y++)
-        for (let x = p.cx - 4; x <= p.cx + 4; x++) grid.put(x, y, 3);
+        for (let x = p.cx - 4; x <= p.cx + 4; x++) s.put(x, y, AMBER);
       break;
     case "SENIOR":
       clearRect(p.cx - 5, 42, p.cx + 5, 45);
       for (let y = 43; y <= 44; y++)
-        for (let x = p.cx - 4; x <= p.cx + 4; x++) grid.put(x, y, 2);
+        for (let x = p.cx - 4; x <= p.cx + 4; x++) s.put(x, y, PHOS);
       break;
     case "CORE":
       for (const sx of [p.cx - 6, p.cx + 5]) {
         clearRect(sx - 1, 42, sx + 2, 46);
         for (let y = 43; y <= 45; y++)
-          for (let x = sx; x <= sx + 1; x++) grid.put(x, y, 2);
+          for (let x = sx; x <= sx + 1; x++) s.put(x, y, PHOS);
       }
       break;
     // FILL — the uniform is the collar; no pips
   }
 
-  return grid.g;
+  return s.px;
 }
 
 // ── The 16×16 roster thumbnail — a composition, not a downscale ──────────────
@@ -777,20 +844,12 @@ function profile16(spec: FaceSpec) {
   };
 }
 
-/** Icon-scale tone: flat, never stipple — below ~32 px a dither field reads
- *  as static, so every tone quantizes to one of two solids. Contrast at
- *  icon scale is carried by the rim, the features, and the collar. The cut
- *  sits below the plate-scale mid-tone (REV C curve) so the binary icons
- *  split ~45/55 light/dark, tracking the roster instead of flipping it. */
-function flat16(tone: number): Ink {
-  return tone > 0.45 ? 1 : 0;
-}
-
 function paint16(spec: FaceSpec): Uint8Array {
   const S = 16;
-  const grid = makeGrid(S);
+  const s = makeSurface(S);
   const p = profile16(spec);
   const hw = (y: number) => hwAt(y, p);
+  const col = faceColors(spec);
 
   // bust mask
   const mask = new Uint8Array(S * S);
@@ -806,7 +865,8 @@ function paint16(spec: FaceSpec): Uint8Array {
     for (let x = Math.round(p.cx - w); x <= Math.round(p.cx + w); x++) mark(x, y, 2);
   }
 
-  // rim + dither
+  // fill — solid tones at icon scale (shading reads as mud at 16 px), rims
+  // one step lighter
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       const mk = mask[y * S + x];
@@ -818,23 +878,27 @@ function paint16(spec: FaceSpec): Uint8Array {
         y === S - 1 ||
         !mask[(y - 1) * S + x] ||
         !mask[(y + 1) * S + x];
-      const tone = mk === 1 ? spec.skin : CLOTH_TONE;
-      grid.put(x, y, edge ? 1 : flat16(tone));
+      if (mk === 1) s.put(x, y, edge ? col.skinLight : col.skin);
+      else s.put(x, y, edge ? col.clothLight : col.cloth);
     }
   }
 
-  // features — icon scale: 2×2 eye blocks in the polarity ink so the eyes
-  // always anchor the face against the (binary) head fill
-  const P: Ink = spec.skin > 0.5 ? 0 : 1;
-  for (const ex of [p.cx - 2, p.cx - 1, p.cx + 1, p.cx + 2]) {
-    grid.put(ex, p.eyeY, P);
-    grid.put(ex, p.eyeY + 1, P);
+  // eyes — sclera flanks an iris pair; the white carries on every skin
+  const eyeRow: [number, RGB][] = [
+    [p.cx - 2, col.sclera],
+    [p.cx - 1, col.iris],
+    [p.cx + 1, col.iris],
+    [p.cx + 2, col.sclera],
+  ];
+  for (const [ex, c] of eyeRow) {
+    s.put(ex, p.eyeY, c);
+    s.put(ex, p.eyeY + 1, c);
   }
-  grid.put(p.cx - 2, p.browY, P);
-  grid.put(p.cx + 2, p.browY, P);
-  for (let x = p.cx - 1; x <= p.cx + 1; x++) grid.put(x, p.mouthY, P);
+  s.put(p.cx - 2, p.browY, col.lash);
+  s.put(p.cx + 2, p.browY, col.lash);
+  for (let x = p.cx - 1; x <= p.cx + 1; x++) s.put(x, p.mouthY, col.lip);
 
-  // hair — cap + sides + back blobs, same rules at icon scale
+  // hair — cap + sides + back blobs, solid color, same rules at icon scale
   const def = hairDef(spec);
   const flip = spec.hairFlip ? -1 : 1;
   const hmask = new Uint8Array(S * S);
@@ -898,7 +962,6 @@ function paint16(spec: FaceSpec): Uint8Array {
     const bx = p.cx + flip * (Math.round(w0) + 1);
     for (let y = 5; y <= 13; y++) hmark(bx, y);
   }
-  const rim: Ink = spec.hairTone > 0.5 && spec.skin > 0.5 ? 0 : 1; // solid at icon scale
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       if (!hmask[y * S + x]) continue;
@@ -908,46 +971,47 @@ function paint16(spec: FaceSpec): Uint8Array {
         y === 0 ||
         !hmask[(y - 1) * S + x] ||
         (y + 1 >= S ? true : !hmask[(y + 1) * S + x]);
-      grid.put(x, y, b ? rim : flat16(spec.hairTone));
+      s.put(x, y, b ? col.hairLight : col.hair);
     }
   }
 
-  // collar line + reading, cryo sensor
-  for (let x = p.cx - 2; x <= p.cx + 2; x++) grid.put(x, 13, 1);
+  // collar seam + reading, cryo sensor
+  for (let x = p.cx - 2; x <= p.cx + 2; x++) s.put(x, 13, col.clothLight);
   const clearRect16 = (x0: number, y0: number, x1: number, y1: number) => {
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid.put(x, y, 0);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) s.clear(x, y);
   };
   switch (spec.collar) {
     case "WATCH":
       clearRect16(p.cx - 2, 14, p.cx + 2, 15);
-      for (let x = p.cx - 1; x <= p.cx + 1; x++) grid.put(x, 14, 3);
+      for (let x = p.cx - 1; x <= p.cx + 1; x++) s.put(x, 14, AMBER);
       break;
     case "SENIOR":
       clearRect16(p.cx - 2, 14, p.cx + 2, 15);
-      for (let x = p.cx - 1; x <= p.cx + 1; x++) grid.put(x, 14, 2);
+      for (let x = p.cx - 1; x <= p.cx + 1; x++) s.put(x, 14, PHOS);
       break;
     case "CORE":
       for (const sx of [p.cx - 2, p.cx + 2]) {
         clearRect16(sx - 1, 14, sx + 1, 15);
-        grid.put(sx, 14, 2);
+        s.put(sx, 14, PHOS);
       }
       break;
     // FILL — no pips
   }
   if (spec.cryo) {
-    grid.put(p.cx - 3, p.eyeY, 2);
-    grid.put(p.cx + 3, p.eyeY, 2);
-    grid.put(p.cx - 3, p.eyeY + 1, 2);
-    grid.put(p.cx + 3, p.eyeY + 1, 2);
+    s.put(p.cx - 3, p.eyeY, PHOS);
+    s.put(p.cx + 3, p.eyeY, PHOS);
+    s.put(p.cx - 3, p.eyeY + 1, PHOS);
+    s.put(p.cx + 3, p.eyeY + 1, PHOS);
   }
 
-  return grid.g;
+  return s.px;
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /** Paint a member's mustered photograph. size 48 = dossier plate, 16 = roster
- *  thumbnail. Pure: same member in, same pixels out, in any process. */
+ *  thumbnail. Returns RGBA bytes (alpha 0 = transparent). Pure: same member
+ *  in, same pixels out, in any process. */
 export function paintFace(m: CrewMember, size: 16 | 48): Uint8Array {
   const spec = buildSpec(m);
   return size === 48 ? paint48(spec) : paint16(spec);
@@ -990,6 +1054,6 @@ for (let i = 0; i < CREW.length; i += 9) {
 }
 
 // collisions are allowed (Elite had them) — scarcity is not
-if (new Set(SPECS.map((s) => JSON.stringify(s))).size < 150) {
+if (new Set(SPECS.map((sp) => JSON.stringify(sp))).size < 150) {
   throw new Error("portrait space collapsed: fewer than 150 distinct faces");
 }

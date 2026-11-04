@@ -148,7 +148,7 @@ spine, distributed sleeper bays, deployable radiators, fuel in the back.
 
 ---
 
-## 4. Crew manifest — DONE (REV C, portraits) · wake-order — ROADMAP
+## 4. Crew manifest — DONE (REV D, portraits) · wake-order — ROADMAP
 
 **Concept** (realized): the 207 colonists are frozen in **cohorts with skill
 distributions**; the manifest is a reading room, not an editor.
@@ -178,40 +178,37 @@ distributions**; the manifest is a reading room, not an editor.
   only when the reserve battery is aboard — same rule as the GA drawing.
 - Crew stats strip: average age, F/M, coverage ×12 — all computed from the
   roster, asserted at load.
-- **Portraits** (REV C, `src/lib/mission/portraits.ts` + `Portrait.tsx`):
+- **Portraits** (REV D, `src/lib/mission/portraits.ts` + `Portrait.tsx`):
   the member seed read as a mustered photograph — one `FaceSpec` per member
   (every layer decision, scale-independent), painted as a 48×48 dossier
   plate and a dedicated 16×16 roster thumbnail. Layer stack: role collar,
-  the only color (phos pips for the core eight, phos bar for seniors,
-  amber braid for the watch) · six head silhouettes · skin as Bayer-4
-  dither density with photographic lighting (lit T-zone, shadowed jaw;
-  tone from the full human range uniformly — nothing keys off name, origin
-  or region) · solid two-tone feature glyphs in polarity ink with an
-  opposite-ink halo (light faces get open eyes — solid dark pads read as
-  sockets) · 18 presentation-lean hair styles with age-scaled salt
-  stipple and a guaranteed hair/skin tone separation · age lines driven
-  by the record's age · phos cryo sensor marks at the temples (cohort
-  members only). Each layer draws from its own RNG stream keyed off the
-  member seed — re-curating the hair library can never reshuffle eyes.
-  REV C tonal calibration: the first cut mapped tone→density linearly and
-  rimmed every head in solid ivory, which washed the whole roster white —
-  at 2× pixel fusion a 35–50% ivory dither on black reads light, and the
-  darkest face on the sheet still measured ~35% ivory. Now the uniform
-  tone draw passes through a perceptual transfer curve (u^1.45, range
-  0.08–0.92) so the full range reads; rims dither one step brighter than
-  their field instead of solid ivory; the T-zone lift on dark faces is
-  0.35 (was 0.7); and hair/skin separation pushes hair *down* (near-black
-  hair against brown skin reads by texture — REV B's upward push painted
-  a light cap on every dark face). At 16 px the thumbnail quantizes to
-  flat two-tone icons (dither reads as static below ~32 px; 2×2
-  polarity-quantized eye blocks; the cut sits at 0.45 so the icons split
-  ~45/55). Doctrine
-  asserted at module load: spec determinism, painter purity (sampled),
-  role→collar totality, cryo consistency, ≥150 distinct faces (207
-  observed). The dossier plate reveals top-to-bottom with a phosphor
-  read cursor (draw-on language, respects reduced motion); roster rows
-  carry the thumbnail. The §7 art-direction question is resolved: the
-  file stays 1-bit ink-on-black; color appears only on the uniform.
+  the only synthetic color (phos pips for the core eight, phos bar for
+  seniors, amber braid for the watch) · six head silhouettes · **skin as
+  real color** — a uniform draw along a seven-anchor human ramp (deep
+  brown → pale), shaded by a light model (lit T-zone, shadowed jaw and
+  neck, rim one step lighter) · eyes ×5 with sclera, a weighted iris
+  gamut (browns common; hazel, blue, green, grey rarer) and pupil ·
+  brows in hair-darkened ink · nose and mouth in tones mixed from the
+  skin · 18 presentation-lean hair styles × a weighted human color table
+  (black and browns common, blonde, auburn, ginger) with a floored
+  lighter rim and age-scaled grey salt · age lines driven by the
+  record's age · phos cryo sensor marks at the temples (cohort members
+  only). Each layer draws from its own RNG stream keyed off the member
+  seed — re-curating the hair library can never reshuffle eyes.
+  REV history, kept honest: REV B painted tone as 1-bit Bayer dither
+  density and read all-white at a glance; REV C recalibrated the curve
+  (measurable spread, still white to the eye); REV D admits the physical
+  limit — a 48×48 plate at 2× is below the fusion threshold where
+  dither reads as tone, so tone comes from pigment now. The §7
+  art-direction question is re-resolved: **the instrument stays 1-bit
+  ivory-on-black; the photograph is the one color object on the ship**
+  (the collar pips and cryo marks remain the only synthetic colors).
+  At 16 px the thumbnail paints solid tones (shading reads as mud at
+  icon scale). Doctrine asserted at module load: spec determinism,
+  painter purity (sampled), role→collar totality, cryo consistency,
+  ≥150 distinct faces (207 observed). The dossier plate reveals
+  top-to-bottom with a phosphor read cursor (draw-on language, respects
+  reduced motion); roster rows carry the thumbnail.
 
 **Still roadmap**:
 

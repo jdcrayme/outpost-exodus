@@ -12,12 +12,13 @@ import { Portrait } from "./Portrait";
 
 // ─── Crew dossier — the personnel record on the right rail ──────────────────
 // The plate is the member seed read as a mustered photograph (portraits.ts,
-// DESIGN_NOTES §4 REV B): 48×48, nearest-neighbor, top-to-bottom scan
+// DESIGN_NOTES §4 REV D): 48×48, nearest-neighbor, top-to-bottom scan
 // reveal. The face code line beneath is the same 32 bits as raw hex —
-// source of truth, then interpretation. Skin is dither density (the file
-// stays 1-bit); the only color is the collar (role pips) and the cryo
-// temple marks. The mastery axis of the member's trade renders in
-// phosphor; the other five in ivory.
+// source of truth, then interpretation. Skin, hair and eyes draw from the
+// human gamut (the photograph is the one color object on the ship); the
+// only synthetic colors are the collar pips and the cryo temple marks.
+// The mastery axis of the member's trade renders in phosphor; the other
+// five in ivory.
 
 export function CrewDossier({ member }: { member: CrewMember }) {
   const mastered = masteryAxis(member.role);
@@ -122,9 +123,9 @@ export function CrewDossier({ member }: { member: CrewMember }) {
 
       <p className="mt-4 text-[9px] leading-relaxed tracking-widest text-neutral-600">
         THE PLATE AND THE FACE CODE ARE THE SAME 32 BITS — THE PHOTOGRAPH IS
-        THE SEED, READ. SKIN IS DITHER DENSITY · AGE LINES FROM THE RECORD ·
-        COLLAR PIPS CARRY THE FUNCTION · CRYO MARKS AT THE TEMPLES. ELITE
-        (1984) HOMAGE.
+        THE SEED, READ. SKIN, HAIR AND EYES FROM THE HUMAN GAMUT · AGE LINES
+        FROM THE RECORD · COLLAR PIPS CARRY THE FUNCTION · CRYO MARKS AT THE
+        TEMPLES. ELITE (1984) HOMAGE.
       </p>
     </HudPanel>
   );
