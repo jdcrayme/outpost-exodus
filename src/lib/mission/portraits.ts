@@ -21,6 +21,12 @@
 //                     monochrome instrument as the rest of the UI. Tone
 //                     draws from the full human range uniformly, for
 //                     everyone; nothing keys off name, origin or region.
+//                     REV C: the uniform draw passes through a perceptual
+//                     transfer curve (u^1.45) — a linear density mapping
+//                     washed the whole roster white at 2× pixel fusion,
+//                     because a 35–50% ivory dither on black reads light.
+//                     The curve spends the range where the eye actually
+//                     spends it: dark tones get the density room.
 //   features          eyes ×5 · brows ×4 · nose ×4 · mouth ×6 — polarity
 //                     ink: ivory lines carved on dark tones, black cuts on
 //                     light ones, so features always contrast the field.
@@ -171,9 +177,9 @@ function hwAt(
 export interface FaceSpec {
   head: number; // 0–5
   headScale: number; // 0.92–1.08 half-width jitter
-  skin: number; // 0.18–0.90 dither density
+  skin: number; // 0.08–0.92 dither density (perceptual curve, REV C)
   hair: string; // style id, from the presentation-filtered library
-  hairTone: number; // 0.06–0.85 dither density
+  hairTone: number; // 0.06–0.72 dither density
   hairFlip: boolean; // mirror the style (swept side, bun side…)
   saltSeed: number; // stream seed for grey stipple
   eyes: number; // 0–4
@@ -197,7 +203,10 @@ export function buildSpec(m: CrewMember): FaceSpec {
   const face: FaceSpec = {
     head: Math.floor(rGeo() * HEADS.length),
     headScale: 0.92 + rGeo() * 0.16,
-    skin: 0.18 + rSkin() * 0.72,
+    // perceptual transfer: the draw stays uniform (social policy — the
+    // full human range for everyone); the curve is instrument calibration
+    // so that draw READS. Linear density read all-white at 2× fusion.
+    skin: 0.08 + 0.84 * Math.pow(rSkin(), 1.45),
     hair: lib[Math.floor(rHair() * lib.length)].id,
     hairTone: 0.06 + rHair() * 0.66,
     hairFlip: rHair() < 0.5,
@@ -211,14 +220,15 @@ export function buildSpec(m: CrewMember): FaceSpec {
     collar: collarClass(m),
     cryo: m.cohort !== 0,
   };
-  // hair must read as hair: push the tone away from the skin so the two
-  // dither fields never merge into one texture
+  // hair must read as hair — but REV B pushed close tones UP on dark
+  // faces, painting a light cap on every one of them and helping wash the
+  // roster white. REV C separates downward: near-black hair against brown
+  // skin reads by texture (solid sparse-black field vs skin speckle), and
+  // the fringe rim carries the hairline. The floor case (very dark skin)
+  // is rim-carried — still better than a light cap.
   const span = Math.abs(face.hairTone - face.skin);
-  if (span < 0.14) {
-    face.hairTone =
-      face.skin > 0.5
-        ? Math.max(0.06, face.hairTone - 0.2)
-        : Math.min(0.72, face.hairTone + 0.2);
+  if (span < 0.15) {
+    face.hairTone = Math.max(0.04, Math.min(face.hairTone, face.skin - 0.15));
   }
   return face;
 }
@@ -258,6 +268,15 @@ const BAYER = new Float32Array(
 
 function dith(x: number, y: number, tone: number): Ink {
   return tone > BAYER[(y & 3) * 4 + (x & 3)] ? 1 : 0;
+}
+
+/** Rim brightness for a field of tone t: one visible step brighter, never
+ *  solid. REV C — the rim used to be unconditionally ivory, which drew a
+ *  white band around every head and lit the whole roster from behind. A
+ *  dithered step-bright rim holds the silhouette at every tone without
+ *  painting anyone in outline-white. */
+function rimTone(t: number): number {
+  return Math.min(0.95, Math.max(0.6, t + 0.2));
 }
 
 /** Stamp a small character pattern. '#'=black slot, 'i'=ivory, 'p'=polarity
@@ -554,8 +573,8 @@ function paintHair48(
     }
   }
 
-  // fill: dither the interior, rim the boundary, salt the grey through
-  const rim: Ink = spec.hairTone > 0.55 && spec.skin > 0.5 ? 0 : 1;
+  // fill: dither the interior, rim the boundary (a step brighter than the
+  // field — REV C, same rule as the bust rim), salt the grey through
   const salt = mulberry32(spec.saltSeed);
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
@@ -566,7 +585,7 @@ function paintHair48(
         y === 0 ||
         !mask[(y - 1) * S + x] ||
         (y + 1 >= S ? true : !mask[(y + 1) * S + x]);
-      if (b) grid.put(x, y, rim);
+      if (b) grid.put(x, y, dith(x, y, rimTone(spec.hairTone)));
       else grid.put(x, y, dith(x, y, spec.hairTone) === 1 || salt() < spec.hairGrey ? 1 : 0);
     }
   }
@@ -586,8 +605,10 @@ function faceTone48(
   const hw = hwAt(Math.min(y, p.chinY), p);
   let t = skin;
   // gentle lift everywhere; very light faces keep grain, dark faces get a
-  // modest T-zone (a strong one would out-shout the feature glyphs)
-  const lift = skin > 0.75 ? 0.5 : skin < 0.45 ? 0.7 : 1;
+  // faint T-zone — REV B's 0.7 lifted their centers to ~0.35 density and
+  // nobody on the roster read as actually dark. 0.35 keeps the structure
+  // while the field keeps its tone.
+  const lift = skin > 0.75 ? 0.5 : skin < 0.45 ? 0.35 : 0.9;
   if (y >= p.browY - 4 && y <= p.browY - 2 && dx <= hw - 2) t += 0.18 * lift;
   else if (y >= p.eyeY + 3 && y <= p.noseTip - 1) {
     if (dx <= 1) t += 0.22 * lift; // nose bridge catchlight
@@ -640,13 +661,8 @@ function paint48(spec: FaceSpec): Uint8Array {
         y === S - 1 ||
         !mask[(y - 1) * S + x] ||
         !mask[(y + 1) * S + x];
-      grid.put(
-        x,
-        y,
-        edge
-          ? 1
-          : dith(x, y, mk === 1 ? faceTone48(x, y, p, spec.skin) : CLOTH_TONE)
-      );
+      const tone = mk === 1 ? faceTone48(x, y, p, spec.skin) : CLOTH_TONE;
+      grid.put(x, y, edge ? dith(x, y, rimTone(tone)) : dith(x, y, tone));
     }
   }
 
@@ -763,9 +779,11 @@ function profile16(spec: FaceSpec) {
 
 /** Icon-scale tone: flat, never stipple — below ~32 px a dither field reads
  *  as static, so every tone quantizes to one of two solids. Contrast at
- *  icon scale is carried by the rim, the features, and the collar. */
+ *  icon scale is carried by the rim, the features, and the collar. The cut
+ *  sits below the plate-scale mid-tone (REV C curve) so the binary icons
+ *  split ~45/55 light/dark, tracking the roster instead of flipping it. */
 function flat16(tone: number): Ink {
-  return tone > 0.5 ? 1 : 0;
+  return tone > 0.45 ? 1 : 0;
 }
 
 function paint16(spec: FaceSpec): Uint8Array {
@@ -880,7 +898,7 @@ function paint16(spec: FaceSpec): Uint8Array {
     const bx = p.cx + flip * (Math.round(w0) + 1);
     for (let y = 5; y <= 13; y++) hmark(bx, y);
   }
-  const rim: Ink = spec.hairTone > 0.5 && spec.skin > 0.5 ? 0 : 1;
+  const rim: Ink = spec.hairTone > 0.5 && spec.skin > 0.5 ? 0 : 1; // solid at icon scale
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       if (!hmask[y * S + x]) continue;

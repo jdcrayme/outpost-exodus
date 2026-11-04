@@ -148,7 +148,7 @@ spine, distributed sleeper bays, deployable radiators, fuel in the back.
 
 ---
 
-## 4. Crew manifest — DONE (REV B, portraits) · wake-order — ROADMAP
+## 4. Crew manifest — DONE (REV C, portraits) · wake-order — ROADMAP
 
 **Concept** (realized): the 207 colonists are frozen in **cohorts with skill
 distributions**; the manifest is a reading room, not an editor.
@@ -178,7 +178,7 @@ distributions**; the manifest is a reading room, not an editor.
   only when the reserve battery is aboard — same rule as the GA drawing.
 - Crew stats strip: average age, F/M, coverage ×12 — all computed from the
   roster, asserted at load.
-- **Portraits** (REV B, `src/lib/mission/portraits.ts` + `Portrait.tsx`):
+- **Portraits** (REV C, `src/lib/mission/portraits.ts` + `Portrait.tsx`):
   the member seed read as a mustered photograph — one `FaceSpec` per member
   (every layer decision, scale-independent), painted as a 48×48 dossier
   plate and a dedicated 16×16 roster thumbnail. Layer stack: role collar,
@@ -193,8 +193,19 @@ distributions**; the manifest is a reading room, not an editor.
   by the record's age · phos cryo sensor marks at the temples (cohort
   members only). Each layer draws from its own RNG stream keyed off the
   member seed — re-curating the hair library can never reshuffle eyes.
-  At 16 px the thumbnail quantizes to flat two-tone icons (dither reads
-  as static below ~32 px; 2×2 polarity-quantized eye blocks). Doctrine
+  REV C tonal calibration: the first cut mapped tone→density linearly and
+  rimmed every head in solid ivory, which washed the whole roster white —
+  at 2× pixel fusion a 35–50% ivory dither on black reads light, and the
+  darkest face on the sheet still measured ~35% ivory. Now the uniform
+  tone draw passes through a perceptual transfer curve (u^1.45, range
+  0.08–0.92) so the full range reads; rims dither one step brighter than
+  their field instead of solid ivory; the T-zone lift on dark faces is
+  0.35 (was 0.7); and hair/skin separation pushes hair *down* (near-black
+  hair against brown skin reads by texture — REV B's upward push painted
+  a light cap on every dark face). At 16 px the thumbnail quantizes to
+  flat two-tone icons (dither reads as static below ~32 px; 2×2
+  polarity-quantized eye blocks; the cut sits at 0.45 so the icons split
+  ~45/55). Doctrine
   asserted at module load: spec determinism, painter purity (sampled),
   role→collar totality, cryo consistency, ≥150 distinct faces (207
   observed). The dossier plate reveals top-to-bottom with a phosphor
