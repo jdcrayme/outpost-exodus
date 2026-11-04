@@ -1,7 +1,8 @@
 // ─── Ship architecture — OUTPOST-class seed ship EXODUS ─────────────────────
 // Pure data, no React: the general-arrangement truth shared by the blueprint
-// drawing (src/screens/equipment/ShipBlueprint.tsx) and, when it arrives, the
-// planned hangar view and crew manifest (DESIGN_NOTES §4). Stations are
+// drawing (src/screens/equipment/ShipBlueprint.tsx), the crew manifest
+// (src/lib/mission/crew.ts + src/screens/crew/), and the planned hangar view
+// (DESIGN_NOTES §4). Stations are
 // metres from the nose datum (STA) — the drawing maps STA → x at 1 unit = 1 m.
 
 import { CREW_COUNT } from "./astro";

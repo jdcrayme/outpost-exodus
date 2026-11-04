@@ -3,15 +3,16 @@
 import { cn } from "@/lib/utils";
 
 // ─── Phase dial — the mission clock face in the header ───────────────────────
-// A ring divided into four phase arcs. Traversed arcs fill ivory, the active
+// A ring divided into five phase arcs. Traversed arcs fill ivory, the active
 // arc burns phosphor green, and a needle points to the current phase.
 // Pure SVG, no animation loop — state-driven like a real instrument.
 
 const PHASES = [
   { angle: 90 }, // 01 STAR SELECT — top
-  { angle: 0 }, // 02 PAYLOAD — right
-  { angle: 270 }, // 03 SURVEY — bottom
-  { angle: 180 }, // 04 LANDING — left
+  { angle: 18 }, // 02 PAYLOAD
+  { angle: -54 }, // 03 CREW
+  { angle: -126 }, // 04 SURVEY
+  { angle: -198 }, // 05 LANDING
 ];
 
 function polar(cx: number, cy: number, r: number, deg: number): [number, number] {
@@ -33,18 +34,18 @@ export function PhaseDial({
   size = 38,
   className,
 }: {
-  /** 0–3 for the four mission phases; -1 (or less) for BOOT. */
+  /** 0–4 for the five mission phases; -1 (or less) for BOOT. */
   phaseIdx: number;
   size?: number;
   className?: string;
 }) {
   const C = 50;
-  const idx = Math.max(-1, Math.min(3, phaseIdx));
+  const idx = Math.max(-1, Math.min(4, phaseIdx));
 
-  // each arc spans 76° with 14° gaps, laid out clockwise from the top
+  // each arc spans 58° with 14° gaps (5 × 72° = 360°), clockwise from the top
   const segArc = (i: number) => {
     const mid = PHASES[i].angle;
-    return arcPath(C, C, 40, mid - 38, mid + 38);
+    return arcPath(C, C, 40, mid - 29, mid + 29);
   };
 
   return (
@@ -54,7 +55,7 @@ export function PhaseDial({
       height={size}
       className={cn("shrink-0", className)}
       role="img"
-      aria-label={`Mission phase ${idx < 0 ? "boot" : idx + 1} of 4`}
+      aria-label={`Mission phase ${idx < 0 ? "boot" : idx + 1} of 5`}
     >
       {/* base ring */}
       <circle cx={C} cy={C} r="40" fill="none" stroke="rgba(232,230,220,0.14)" strokeWidth="1" />

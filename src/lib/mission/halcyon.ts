@@ -67,6 +67,9 @@ export const HALCYON_VLBI_ON =
 export const HALCYON_PAYLOAD_OK =
   "Manifest accepted. Mass distribution is within tolerance. The sleepers will never know how close the numbers were.";
 
+export const HALCYON_CREW_OPEN =
+  "The crew manifest, Commander. Two hundred and seven souls: a watch of three in the sphere, and twelve cohorts of seventeen — one cohort to a bay, so no single catastrophe reaches a second. I have known their names since the keel was laid.";
+
 export function halcyonTransit(star: StarSystem, years: number): string {
   return `Transit engaged. Arrival at ${star.name} in ${years} years. I will keep the lights on.`;
 }

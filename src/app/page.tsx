@@ -15,6 +15,7 @@ import {
   HALCYON_RESTART,
   halcyonStarCommitted,
   HALCYON_PAYLOAD_OK,
+  HALCYON_CREW_OPEN,
 } from "@/lib/mission/halcyon";
 import { CrtOverlay, TypeLine } from "@/components/common/TypeLine";
 import { PhaseDial } from "@/components/common/PhaseDial";
@@ -23,6 +24,7 @@ import { BootScreen } from "@/screens/boot/BootScreen";
 import { IntroScreen } from "@/screens/intro/IntroScreen";
 import { StarSelect } from "@/screens/star-select/StarSelect";
 import { EquipmentScreen } from "@/screens/equipment/EquipmentScreen";
+import { CrewScreen } from "@/screens/crew/CrewScreen";
 import { TransitScreen } from "@/screens/transit/TransitScreen";
 import { PlanetSelect } from "@/screens/planet-select/PlanetSelect";
 import { MissionProfile } from "@/screens/profile/MissionProfile";
@@ -31,8 +33,9 @@ import { cn } from "@/lib/utils";
 const PHASE_STEPS: { id: Phase; label: string; code: string }[] = [
   { id: "STAR", label: "STAR SELECT", code: "01" },
   { id: "EQUIP", label: "PAYLOAD", code: "02" },
-  { id: "TRANSIT", label: "SURVEY", code: "03" },
-  { id: "PLANET", label: "LANDING", code: "04" },
+  { id: "CREW", label: "CREW", code: "03" },
+  { id: "TRANSIT", label: "SURVEY", code: "04" },
+  { id: "PLANET", label: "LANDING", code: "05" },
 ];
 
 const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
@@ -45,6 +48,10 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
   EQUIP: {
     title: "SHIP EQUIPMENT — PAYLOAD MANIFEST",
     sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,075-tonne catalog.",
+  },
+  CREW: {
+    title: "CREW MANIFEST — COLD-SLEEP ROSTER",
+    sub: "207 souls: a watch of three in the command sphere, and twelve cohorts of seventeen along the spine — one cohort to a bay, every cohort carrying the whole civilization, so no single catastrophe reaches a second. HALCYON holds the transit watch.",
   },
   TRANSIT: { title: "TRANSIT & SURVEY", sub: "" },
   PLANET: {
@@ -153,12 +160,18 @@ export default function OutpostPage() {
   };
 
   const confirmPayload = () => {
-    setPhase("TRANSIT");
+    setPhase("CREW");
     addLog(
       `PAYLOAD CONFIRMED — ${equipmentItems.length} ITEMS / ${equipmentItems.reduce((a, e) => a + e.massT, 0)} T`
     );
     addLog("DEPARTURE PROFILE — TJI BURN 8.80 KM/S · JOVIAN ASSIST δ 115.8° · C3 ESCAPE 0.100 C");
     addLog(HALCYON_PAYLOAD_OK);
+    setHalLine(HALCYON_CREW_OPEN);
+  };
+
+  const proceedCrew = () => {
+    setPhase("TRANSIT");
+    addLog("CREW ROSTER VERIFIED — 207 SOULS · 12/12 COHORTS COMPLETE");
   };
 
   const finishTransit = () => {
@@ -319,6 +332,17 @@ export default function OutpostPage() {
                 ◂ REVISE DESTINATION
               </button>
             )}
+            {phase === "CREW" && (
+              <button
+                onClick={() => {
+                  setPhase("EQUIP");
+                  halcyonAudio.select();
+                }}
+                className="border border-ink/15 px-3 py-1.5 text-[9px] tracking-[0.25em] text-neutral-500 hover:border-ink/40 hover:text-ink"
+              >
+                ◂ REVISE PAYLOAD
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -336,6 +360,9 @@ export default function OutpostPage() {
             onConfirm={confirmPayload}
             onSpeak={speak}
           />
+        )}
+        {phase === "CREW" && (
+          <CrewScreen equipment={equipment} onConfirm={proceedCrew} />
         )}
         {phase === "TRANSIT" && star && (
           <TransitScreen

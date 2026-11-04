@@ -47,7 +47,7 @@ starfield auto-rotation ~0.2×. The Discovery's displays drift; they never race.
 
 ## 2. Current state of the mission sequence
 
-`INTRO → BOOT → STAR → EQUIP → TRANSIT → PLANET → PROFILE` (state machine in
+`INTRO → BOOT → STAR → EQUIP → CREW → TRANSIT → PLANET → PROFILE` (state machine in
 `src/app/page.tsx`):
 
 0. **INTRO** — title card: the 2096–2098 impact prologue (the old boot prelude,
@@ -61,11 +61,13 @@ starfield auto-rotation ~0.2×. The Discovery's displays drift; they never race.
    neighborhood (drag to rotate), dossier with transit solution.
 3. **EQUIP** — payload manifest over a **general-arrangement blueprint**
    (see §3).
-4. **TRANSIT** — conic transfer arc, Kepler-solved ship marker, live vis-viva
+4. **CREW** — the roster of record, arranged by cohort (see §4): the
+   cold-sleep chain drawing navigates; the dossier rides the right rail.
+5. **TRANSIT** — conic transfer arc, Kepler-solved ship marker, live vis-viva
    plate, streaming telemetry.
-5. **PLANET** — VLBI survey: system chart, candidate world list, landing
+6. **PLANET** — VLBI survey: system chart, candidate world list, landing
    dossier with gauges. No probe = blind landing (mass and orbit only).
-6. **PROFILE** — final mission profile; HALCYON signs off with his waveform.
+7. **PROFILE** — final mission profile; HALCYON signs off with his waveform.
 
 ---
 
@@ -108,8 +110,8 @@ spine, distributed sleeper bays, deployable radiators, fuel in the back.
 - **Stowage is data**: `src/lib/mission/ship.ts` holds the architecture —
   `STOWAGE` (per item: rack cells like `D1-06`, a strongback dock at a STA,
   or fitted-to-bays), `BAYS`, `RACK` — with module-level arithmetic checks
-  (3 + 12×17 = 207, rack addresses validated). The planned hangar view and
-  crew manifest (§4) consume the same table.
+  (3 + 12×17 = 207, rack addresses validated). The crew manifest (§4,
+  done) and the planned hangar view consume the same table.
 - **Camera** — three viewBox presets, **FULL SHIP / CARGO RING / CRYO BAYS**,
   tweened imperatively with rAF (950 ms, eased; instant under
   prefers-reduced-motion). The screen opens on the establish shot; the first
@@ -146,34 +148,51 @@ spine, distributed sleeper bays, deployable radiators, fuel in the back.
 
 ---
 
-## 4. ROADMAP — Crew manifest, cohorts & procedural portraits
+## 4. Crew manifest — DONE (REV A) · portraits & wake-order — ROADMAP
 
-**Concept**: the 207 colonists are frozen in **cohorts with skill
-distributions**; waking a cohort is a game mechanic (they consume power, food,
-life support while awake).
+**Concept** (realized): the 207 colonists are frozen in **cohorts with skill
+distributions**; the manifest is a reading room, not an editor.
 
-- **Command crew (3)** wakes automatically at system entry.
-- Geology/heavy-industry cohorts stay frozen until probe data or landfall
-  demands them; medical and command-adjacent skills wake earlier.
-- Each thaw carries a small **failure risk scaled by years in transit** —
-  waking people is a medical procedure, not an alarm clock.
-- Wake-order becomes a resource-timing puzzle sharing the same budget UI as the
-  payload screen.
+**Implementation** (`src/lib/mission/crew.ts` + `src/screens/crew/`):
 
-**Generation approach** (Elite 1984 homage — 2⁴⁸ faces from a fixed seed):
+- **Coverage doctrine**: every cohort carries all eight civilizational
+  functions (physician, agronomist, fabricator, power engineer, geologist,
+  teacher, ecologist, geneticist) — berth 01 is the cohort senior, berths
+  02–09 the core eight (shuffled per cohort), berths 10–17 a weighted fill
+  pool. **Asserted at module load**, not assumed: count, per-cohort coverage,
+  senior-on-berth-01, roster-wide name uniqueness — a bad pool throws at
+  import, it cannot silently mis-muster.
+- **Address-keyed determinism**: every member's seed derives from their berth
+  address (`C-04:07`), so flavour fields (name, age, origin, record) can be
+  re-curated without reshuffling faces or coverage. Only the seed is stored;
+  everything regenerates. Same crew — forever (charter §1).
+- **The screen** (phase 03, between payload and transit): a **cold-sleep
+  chain strip** (DWG OE-105-CS, same frame as the GA drawing — the strip is
+  just the origin shifted) that is the cohort navigator — hover a bay for
+  station data in the status line, click it to jump to its cohort panel;
+  watch + twelve cohort panels; a right-rail **dossier** with record of
+  service, skill axes (the trade's mastery axis in phos) and the **face
+  code** — the member seed as an 8×4 registration strip plus hex, the Elite
+  (1984) commander-face homage until the portrait layer lands. Bus B renders
+  only when the reserve battery is aboard — same rule as the GA drawing.
+- Crew stats strip: average age, F/M, coverage ×12 — all computed from the
+  roster, asserted at load.
 
-- `crew.ts` in `lib/mission/`, seeded from the mission: name (curated
-  multi-region lists), age, role, 5–6 skill axes, cohort/bay assignment,
-  one-line service record. **Store only the seed**; regenerate on demand.
-- **The bay layout is already drawn** (REV E): `BAYS` in `ship.ts` (12 bays ×
-  17 souls, alternating buses, staggered clock positions) is the join key for
-  cohort/bay assignment — the manifest plugs straight into the drawing.
-- **Portraits: layered procedural pixel art, 48×48, nearest-neighbor upscale**:
-  head shape × skin tone × hair × eyes × age lines × uniform collar with role
-  pips. One rendering function per layer — style is consistent by construction.
-- Each colonist's dossier shows their **face code in hex** (the seed), a direct
-  nod to Elite's commander faces.
-- Effort estimate: manifest ~½ day; portrait layer curation ~1 day.
+**Still roadmap**:
+
+- **Portraits**: layered procedural pixel art, 48×48, nearest-neighbor
+  upscale — head shape × skin tone × hair × eyes × age lines × uniform
+  collar with role pips, one rendering function per layer. Art direction
+  open question: pure 1-bit ink-on-black vs limited phos/amber accents.
+  Effort ~1 day.
+- **Wake-order as a resource-timing puzzle**: command crew (3) wakes
+  automatically at system entry (HALCYON holds mid-transit); geology and
+  heavy-industry cohorts stay frozen until probe data or landfall demands
+  them. Each thaw carries a **failure risk scaled by years in transit** —
+  waking people is a medical procedure, not an alarm clock. Shares the
+  budget UI language with the payload screen.
+- Open question stands: schedule wakes **during transit** (planner on the
+  transit screen) or resolve as events after arrival — or both.
 
 ---
 
@@ -212,7 +231,9 @@ colony-start risk event drawn from the seed.
 | `src/app/globals.css` | instrument layer: grid-paper, CRT overlay, draw-on, blueprint classes (`bp-*`) |
 | `src/lib/mission/engine.ts` | `mulberry32`, `hashString`, seeded system generation |
 | `src/lib/mission/equipment.ts` | payload catalog + capacities |
-| `src/lib/mission/ship.ts` | ship architecture — `STOWAGE`, `BAYS`, `RACK`; shared by the blueprint and the future hangar view/crew manifest |
+| `src/lib/mission/ship.ts` | ship architecture — `STOWAGE`, `BAYS`, `RACK`; shared by the blueprint, the crew manifest, and the future hangar view |
+| `src/lib/mission/crew.ts` | the 207-soul roster — coverage-guaranteed cohorts, address-keyed seeds, load-time assertions |
+| `src/screens/crew/` | crew manifest — `BayChain` navigator strip, `CrewDossier`, roster panels |
 | `src/screens/intro/` | title card — prologue beats, vector logo, drifting starfield; pacing constants at the top of `IntroScreen.tsx` |
 | `src/screens/equipment/ShipBlueprint.tsx` | GA drawing + camera presets + `useTickNumber` |
 | `src/components/common/` | shared instrument widgets (HudPanel bank, Lissajous, PlanetScan, TypeLine); one folder per screen under `src/screens/` |

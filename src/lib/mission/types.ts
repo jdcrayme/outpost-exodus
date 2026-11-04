@@ -91,7 +91,15 @@ export interface MissionState {
   planetId: string | null;
 }
 
-export type Phase = "INTRO" | "BOOT" | "STAR" | "EQUIP" | "TRANSIT" | "PLANET" | "PROFILE";
+export type Phase =
+  | "INTRO"
+  | "BOOT"
+  | "STAR"
+  | "EQUIP"
+  | "CREW"
+  | "TRANSIT"
+  | "PLANET"
+  | "PROFILE";
 
 export interface LogEntry {
   t: string; // mission clock stamp
