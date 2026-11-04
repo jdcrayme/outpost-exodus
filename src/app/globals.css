@@ -456,6 +456,11 @@
   box-shadow: inset 2px 0 0 #e8e6dc;
 }
 
+/* Procedural portraits — nearest-neighbor upscale, never smoothed */
+.portrait-pix {
+  image-rendering: pixelated;
+}
+
 /* ─── Intro title card — corona bloom + wordmark ───────────────────────────── */
 
 .intro-bloom {

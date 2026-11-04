@@ -8,12 +8,16 @@ import {
   masteryAxis,
   type CrewMember,
 } from "@/lib/mission/crew";
+import { Portrait } from "./Portrait";
 
 // ─── Crew dossier — the personnel record on the right rail ──────────────────
-// Face code: the member seed, visualized. 32 bits → an 8×4 registration strip
-// (phos = 1, faint = 0) plus the hex string — the Elite (1984) commander-face
-// homage until the portrait layer lands (DESIGN_NOTES §4). The mastery axis
-// of the member's trade renders in phosphor; the other five in ivory.
+// The plate is the member seed read as a mustered photograph (portraits.ts,
+// DESIGN_NOTES §4 REV B): 48×48, nearest-neighbor, top-to-bottom scan
+// reveal. The face code line beneath is the same 32 bits as raw hex —
+// source of truth, then interpretation. Skin is dither density (the file
+// stays 1-bit); the only color is the collar (role pips) and the cryo
+// temple marks. The mastery axis of the member's trade renders in
+// phosphor; the other five in ivory.
 
 export function CrewDossier({ member }: { member: CrewMember }) {
   const mastered = masteryAxis(member.role);
@@ -28,30 +32,14 @@ export function CrewDossier({ member }: { member: CrewMember }) {
       bodyClassName="p-4"
       className="lg:mb-0"
     >
-      {/* face code block + identity */}
+      {/* the plate + identity — an attached photograph in a personnel file */}
       <div className="flex items-start gap-3">
-        <svg
-          viewBox="0 0 45 25"
-          className="mt-0.5 h-[50px] w-[90px] shrink-0"
-          role="img"
-          aria-label={`Face code ${hex}`}
-        >
-          {Array.from({ length: 32 }, (_, i) => {
-            const r = Math.floor(i / 8);
-            const c = i % 8;
-            const on = ((member.seed >>> i) & 1) === 1;
-            return (
-              <rect
-                key={i}
-                x={c * 5 + 2}
-                y={r * 5 + 2}
-                width={4.5}
-                height={4.5}
-                fill={on ? "rgba(123,235,166,0.75)" : "rgba(232,230,220,0.06)"}
-              />
-            );
-          })}
-        </svg>
+        <figure className="m-0 shrink-0 border border-ink/15 bg-black/60 p-1">
+          <Portrait member={member} px={96} />
+          <figcaption className="hal-mono mt-1 text-center text-[7px] tracking-[0.22em] text-neutral-600">
+            MUSTERED PHOTO
+          </figcaption>
+        </figure>
         <div className="min-w-0 flex-1">
           <div className="hal-display text-sm tracking-[0.18em] text-ink">
             {member.name}
@@ -133,8 +121,10 @@ export function CrewDossier({ member }: { member: CrewMember }) {
       </div>
 
       <p className="mt-4 text-[9px] leading-relaxed tracking-widest text-neutral-600">
-        FACE CODE IS THE MEMBER SEED — FIXED SEEDS, THE ELITE (1984) HOMAGE.
-        PORTRAIT LAYER IS ROADMAP §4.
+        THE PLATE AND THE FACE CODE ARE THE SAME 32 BITS — THE PHOTOGRAPH IS
+        THE SEED, READ. SKIN IS DITHER DENSITY · AGE LINES FROM THE RECORD ·
+        COLLAR PIPS CARRY THE FUNCTION · CRYO MARKS AT THE TEMPLES. ELITE
+        (1984) HOMAGE.
       </p>
     </HudPanel>
   );

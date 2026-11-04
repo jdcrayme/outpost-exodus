@@ -21,15 +21,17 @@ import {
 } from "@/lib/mission/crew";
 import { BayChain } from "./BayChain";
 import { CrewDossier } from "./CrewDossier";
+import { PortraitThumb } from "./Portrait";
 
 // ─── Crew manifest — the roster of record, arranged by cohort ────────────────
 // Phase 03, between payload and transit. The roster is static data (mustered
 // at the keel, crew.ts) — this screen is a reading room, not an editor.
 // The cold-sleep chain drawing is the cohort navigator: hover a bay for its
 // station data, click it to jump to its cohort panel. Selecting any soul
-// opens their dossier on the right rail: record of service, skill axes with
-// the trade's mastery in phos, and the face code (the member seed, the Elite
-// homage) until the portrait layer lands.
+// opens their dossier on the right rail: the mustered photograph (the
+// member seed read as a face, portraits.ts), record of service, and skill
+// axes with the trade's mastery in phos. Roster rows carry the 16×16
+// thumbnail of the same face.
 
 // one roster row — full-width button, single line, dossier on click
 function CrewRow({
@@ -49,11 +51,12 @@ function CrewRow({
       aria-pressed={selected}
       aria-label={`${m.name}, ${m.role}, age ${m.age}, from ${m.origin}`}
       className={cn(
-        "flex w-full items-baseline gap-2.5 border-b border-ink/5 px-3 py-[7px] text-left transition-colors hover:bg-ink/5",
+        "flex w-full items-center gap-2.5 border-b border-ink/5 px-3 py-[7px] text-left transition-colors hover:bg-ink/5",
         selected && "hud-row-selected bg-ink/5",
         senior && "border-l-2 border-l-phos/70 bg-phos/5"
       )}
     >
+      <PortraitThumb member={m} />
       <span className="w-6 shrink-0 text-[10px] tabular-nums text-neutral-600">
         {String(m.berth).padStart(2, "0")}
       </span>

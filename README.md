@@ -53,7 +53,7 @@ then `vercel --prod` when you're happy with the preview.
 
 The app is a single state machine, owned by `src/app/page.tsx`:
 
-`INTRO → BOOT → STAR → EQUIP → TRANSIT → PLANET → PROFILE`
+`INTRO → BOOT → STAR → EQUIP → CREW → TRANSIT → PLANET → PROFILE`
 
 0. **INTRO** — title card: the 2096–2098 impact prologue fades in over a drifting
    starfield, then the OUTPOST // EXODUS logo blooms in — skippable
@@ -61,10 +61,14 @@ The app is a single state machine, owned by `src/app/page.tsx`:
    9000's neural pattern stabilizes on a scope and the initiate button appears
 2. **STAR** — destination star select from the catalog
 3. **EQUIP** — seed-ship payload manifest with mass/power budget
-4. **TRANSIT** — transit plot: conic transfer arc, Kepler-solved ship marker, live
+4. **CREW** — cold-sleep roster: 207 souls in twelve bays, every cohort
+   carrying all eight civilizational functions; procedural mustered photos
+   (48 px dossier plates, 16 px roster thumbnails — the member seed read as
+   a face, the Elite homage)
+5. **TRANSIT** — transit plot: conic transfer arc, Kepler-solved ship marker, live
    vis-viva equation (typeset with KaTeX) and streaming telemetry
-5. **PLANET** — VLBI probe planet survey; choose a landing site
-6. **PROFILE** — final mission profile; HAL signs off with his waveform
+6. **PLANET** — VLBI probe planet survey; choose a landing site
+7. **PROFILE** — final mission profile; HAL signs off with his waveform
 
 ## Project layout
 
@@ -83,6 +87,11 @@ src/
                         #                     radiators, aft fuel; 3 camera
                         #                     presets, 207 berth dots,
                         #                     true-scale human, title block)
+                        #   crew/          — CrewScreen + BayChain (cold-sleep
+                        #                     chain navigator) + CrewDossier +
+                        #                     Portrait (procedural mustered
+                        #                     photos: member seed → 48 px plate
+                        #                     / 16 px thumbnail)
                         #   transit/        — TransitScreen + TransitPlot
                         #                     (Kepler-solved arc, live vis-viva plate)
                         #   planet-select/  — PlanetSelect + OrbitMap (system chart)
@@ -99,7 +108,10 @@ src/
                         #   equipment.ts  — payload manifest
                         #   engine.ts     — deterministic seeded planet generation
                         #   astro.ts      — conic sections, Kepler solver, vis-viva
-                        #   hal.ts        — HAL dialogue lines
+                        #   ship.ts       — ship architecture: bays, stowage, rack
+                        #   crew.ts       — the 207-soul roster, coverage-guaranteed
+                        #   portraits.ts  — procedural mustered photographs
+                        #   halcyon.ts    — HALCYON dialogue lines
                         #   audio.ts      — Web Audio synthesizer
 public/fonts/           # self-hosted IBM Plex Mono
 docs/DESIGN_NOTES.md    # design charter, decisions, and roadmap record

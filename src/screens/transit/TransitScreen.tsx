@@ -42,7 +42,7 @@ export function TransitScreen({
   const [step, setStep] = useState(0); // 0 sep, 1 transit, 2 arrival, 3 survey, 4 complete
   const [years, setYears] = useState(0);
   const [signals, setSignals] = useState(0);
-  const timers = useRef<ReturnType<typeof setTimeout> | setTimeout[]>([]);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const doneRef = useRef(false);
 
   useEffect(() => {

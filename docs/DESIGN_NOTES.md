@@ -148,7 +148,7 @@ spine, distributed sleeper bays, deployable radiators, fuel in the back.
 
 ---
 
-## 4. Crew manifest — DONE (REV A) · portraits & wake-order — ROADMAP
+## 4. Crew manifest — DONE (REV B, portraits) · wake-order — ROADMAP
 
 **Concept** (realized): the 207 colonists are frozen in **cohorts with skill
 distributions**; the manifest is a reading room, not an editor.
@@ -171,20 +171,39 @@ distributions**; the manifest is a reading room, not an editor.
   just the origin shifted) that is the cohort navigator — hover a bay for
   station data in the status line, click it to jump to its cohort panel;
   watch + twelve cohort panels; a right-rail **dossier** with record of
-  service, skill axes (the trade's mastery axis in phos) and the **face
-  code** — the member seed as an 8×4 registration strip plus hex, the Elite
-  (1984) commander-face homage until the portrait layer lands. Bus B renders
+  service, skill axes (the trade's mastery axis in phos), and the mustered
+  **portrait plate** with the face code hex line beneath — the same 32
+  bits, read two ways (the Elite (1984) homage, grown up; the pre-portrait
+  8×4 registration strip is retired). Bus B renders
   only when the reserve battery is aboard — same rule as the GA drawing.
 - Crew stats strip: average age, F/M, coverage ×12 — all computed from the
   roster, asserted at load.
+- **Portraits** (REV B, `src/lib/mission/portraits.ts` + `Portrait.tsx`):
+  the member seed read as a mustered photograph — one `FaceSpec` per member
+  (every layer decision, scale-independent), painted as a 48×48 dossier
+  plate and a dedicated 16×16 roster thumbnail. Layer stack: role collar,
+  the only color (phos pips for the core eight, phos bar for seniors,
+  amber braid for the watch) · six head silhouettes · skin as Bayer-4
+  dither density with photographic lighting (lit T-zone, shadowed jaw;
+  tone from the full human range uniformly — nothing keys off name, origin
+  or region) · solid two-tone feature glyphs in polarity ink with an
+  opposite-ink halo (light faces get open eyes — solid dark pads read as
+  sockets) · 18 presentation-lean hair styles with age-scaled salt
+  stipple and a guaranteed hair/skin tone separation · age lines driven
+  by the record's age · phos cryo sensor marks at the temples (cohort
+  members only). Each layer draws from its own RNG stream keyed off the
+  member seed — re-curating the hair library can never reshuffle eyes.
+  At 16 px the thumbnail quantizes to flat two-tone icons (dither reads
+  as static below ~32 px; 2×2 polarity-quantized eye blocks). Doctrine
+  asserted at module load: spec determinism, painter purity (sampled),
+  role→collar totality, cryo consistency, ≥150 distinct faces (207
+  observed). The dossier plate reveals top-to-bottom with a phosphor
+  read cursor (draw-on language, respects reduced motion); roster rows
+  carry the thumbnail. The §7 art-direction question is resolved: the
+  file stays 1-bit ink-on-black; color appears only on the uniform.
 
 **Still roadmap**:
 
-- **Portraits**: layered procedural pixel art, 48×48, nearest-neighbor
-  upscale — head shape × skin tone × hair × eyes × age lines × uniform
-  collar with role pips, one rendering function per layer. Art direction
-  open question: pure 1-bit ink-on-black vs limited phos/amber accents.
-  Effort ~1 day.
 - **Wake-order as a resource-timing puzzle**: command crew (3) wakes
   automatically at system entry (HALCYON holds mid-transit); geology and
   heavy-industry cohorts stay frozen until probe data or landfall demands
@@ -233,7 +252,8 @@ colony-start risk event drawn from the seed.
 | `src/lib/mission/equipment.ts` | payload catalog + capacities |
 | `src/lib/mission/ship.ts` | ship architecture — `STOWAGE`, `BAYS`, `RACK`; shared by the blueprint, the crew manifest, and the future hangar view |
 | `src/lib/mission/crew.ts` | the 207-soul roster — coverage-guaranteed cohorts, address-keyed seeds, load-time assertions |
-| `src/screens/crew/` | crew manifest — `BayChain` navigator strip, `CrewDossier`, roster panels |
+| `src/lib/mission/portraits.ts` | procedural mustered photographs — `FaceSpec`, 48/16 painters, load-time doctrine |
+| `src/screens/crew/` | crew manifest — `BayChain` navigator strip, `CrewDossier` + `Portrait` plates, roster rows with thumbnails |
 | `src/screens/intro/` | title card — prologue beats, vector logo, drifting starfield; pacing constants at the top of `IntroScreen.tsx` |
 | `src/screens/equipment/ShipBlueprint.tsx` | GA drawing + camera presets + `useTickNumber` |
 | `src/components/common/` | shared instrument widgets (HudPanel bank, Lissajous, PlanetScan, TypeLine); one folder per screen under `src/screens/` |
@@ -250,7 +270,5 @@ the ship is a document, and documents have drawing numbers.
   screen) or resolved as events after arrival — or both (plan vs. reality)?
 - Do probe results get their own screen between PLANET and PROFILE, or layer
   into the existing dossier?
-- Portrait art direction: pure 1-bit ink-on-black (matches the charter) vs
-  limited phosphor/amber accents on 48×48?
 - Multiplayer/archive hook: publish the final mission profile as a shareable
   seed string?

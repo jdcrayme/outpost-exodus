@@ -16,8 +16,9 @@
 //
 // Berth numbering is a drawing convention shared with the blueprint: berths
 // 01–09 ride the dorsal row of the bay, 10–17 the ventral row; the watch
-// occupies berths W-01…W-03 in the command sphere. The future portrait layer
-// (DESIGN_NOTES §4) keys off the same member seed shown here as the face code.
+// occupies berths W-01…W-03 in the command sphere. The portrait layer
+// (portraits.ts, DESIGN_NOTES §4 REV B) keys off the same member seed shown
+// here as the face code.
 
 import { mulberry32, hashString } from "./engine";
 import {
@@ -164,7 +165,7 @@ export const CORE_ROLES = [
   "GENETICIST",
 ] as const;
 
-const FILL_ROLES: { role: string; w: number }[] = [
+export const FILL_ROLES: { role: string; w: number }[] = [
   { role: "TECHNICIAN", w: 3 },
   { role: "MEDIC", w: 2 },
   { role: "FABRICATOR", w: 2 },
@@ -308,7 +309,11 @@ function buildMember(
 
 // ── The watch — three berths in the command sphere, awake at departure ───────
 
-const WATCH_ROLES = ["MISSION COMMANDER", "ASTROGATOR", "FLIGHT SURGEON"];
+export const WATCH_ROLES = [
+  "MISSION COMMANDER",
+  "ASTROGATOR",
+  "FLIGHT SURGEON",
+];
 
 // NOTE: ship.ts exports WATCH_CREW = 3 (the count). This array is WATCH.
 export const WATCH: CrewMember[] = WATCH_ROLES.map((role, i) =>
