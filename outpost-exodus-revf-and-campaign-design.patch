@@ -1,0 +1,2816 @@
+From cdd45dbe46187576be17a0f30b796cd96c94baf9 Mon Sep 17 00:00:00 2001
+From: z-ai <zai@z.ai>
+Date: Wed, 4 Nov 2026 12:35:19 +0000
+Subject: [PATCH 1/2] =?UTF-8?q?REV=20F=20=E2=80=94=20realism=20pass:=20the?=
+ =?UTF-8?q?=20ship=20can=20stop,=20and=20the=20decades=20are=20not=20kind?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Physics (astro.ts):
+- Magsail braking architecture (Zubrin/Andrews): a₀=0.25 m/s² ram drag,
+  deployed 0.765 ly out, 29,979→4,000 km/s over 24.7 yr; fusion reserve
+  finishes capture. New MAGSAIL + CAPTURE phases; all transit totals
+  recomputed (Proxima 45.2→63.6 yr, Tau Ceti 121.9→140.2).
+- Torch burn stretched 0.05→2.0 yr (jet power 34 PW→0.9 TW; radiators
+  1,200 km²→34 km²). Sundiver/Oberth considered and rejected — Oberth
+  does nothing for multi-year burns; the Jovian flyby's real job is the
+  115.8° asymptote bend.
+- Relativistic plate: ship proper time τ=∫dt/γ, β, Sol-beacon Doppler
+  (8.4 GHz → 7.60 GHz at cruise), LY-range formatting.
+- Whipple erosion budget: v³-weighted dose, τ=300 yr → margin telemetry.
+
+Navigation (stars.ts):
+- Real Gaia DR3/Hipparcos proper motions for all 16 stars; interceptSolution()
+  aim-ahead geometry (Barnard's: 1,647 AU, 0.25° lead); PLOT 03-D intercept
+  inset on the transit plate; star-dossier rows; HALCYON aim-ahead lines.
+- Fixed catalog typo: 61 CYGANI → 61 CYGNI.
+
+Crew systems (ship.ts + screens):
+- Cold sleep is honestly therapeutic torpor at 281 K (+8 °C), not 4 K cryo
+  (Carnot says 72 W per watt removed). Jargon stays; telemetry tells truth.
+
+The decades are not kind (events.ts, new):
+- Seeded transit failures with equipment-dependent outcomes; new SHIPBOARD
+  REMANUFACTURING SHOP (85 t, RMS) — spares are dead mass, feedstock is
+  alive. Manifest 2,075→2,160 t. Prognosis gains REPAIR & RECOVERY factor.
+
+Astrobiology (engine.ts):
+- Abiotic-O₂ branch (Luger & Barnes 2015): breathable worlds around
+  <0.75 M☉ stars carry quarantine doctrine; bio-cabinet on the science
+  lander resolves it (+2) or not (−6). Flare class now gates oxygen.
+- Albedo 0.3 + 33√p greenhouse (Earth = +15 °C exactly); HZ worlds now
+  span −40..+32 °C on their own.
+
+Blueprint REV E → REV F:
+- Droplet-curtain radiators with drafting breaks (34 km² @ 1,450 K),
+  magsail drum on the forward spine, torpor bay telemetry.
+
+QA: tsc clean, build clean, runtime assertions pass, verify-revf.ts +
+smoke-visual.mjs + check-labels.mjs + check-geometry.mjs (0 overflows,
+0 overlaps). Design notes §5 rewritten (survey campaign + orbital-first
+doctrine) and §8 added (full changelog with numbers).
+---
+ docs/DESIGN_NOTES.md                       | 219 ++++++++++++++++-
+ package-lock.json                          |  14 ++
+ package.json                               |   1 +
+ scripts/check-breathable.ts                |   9 +
+ scripts/check-geometry.mjs                 |  36 +++
+ scripts/check-labels.mjs                   |  30 +++
+ scripts/smoke-visual.mjs                   |  71 ++++++
+ scripts/verify-revf.ts                     | 121 ++++++++++
+ src/app/page.tsx                           |   8 +-
+ src/lib/mission/astro.ts                   | 266 ++++++++++++++++++---
+ src/lib/mission/engine.ts                  |  47 +++-
+ src/lib/mission/equipment.ts               |  28 ++-
+ src/lib/mission/events.ts                  | 152 ++++++++++++
+ src/lib/mission/halcyon.ts                 |  28 ++-
+ src/lib/mission/ship.ts                    |  12 +-
+ src/lib/mission/stars.ts                   |  72 +++++-
+ src/lib/mission/types.ts                   |   8 +
+ src/screens/crew/CrewScreen.tsx            |   4 +-
+ src/screens/equipment/EquipmentScreen.tsx  |   2 +-
+ src/screens/equipment/ShipBlueprint.tsx    |  65 +++--
+ src/screens/planet-select/PlanetSelect.tsx |   6 +
+ src/screens/profile/MissionProfile.tsx     |   8 +
+ src/screens/star-select/StarSelect.tsx     |  10 +-
+ src/screens/transit/TransitPlot.tsx        | 191 ++++++++++++++-
+ src/screens/transit/TransitScreen.tsx      |  87 +++++--
+ 25 files changed, 1374 insertions(+), 121 deletions(-)
+ create mode 100644 scripts/check-breathable.ts
+ create mode 100644 scripts/check-geometry.mjs
+ create mode 100644 scripts/check-labels.mjs
+ create mode 100644 scripts/smoke-visual.mjs
+ create mode 100644 scripts/verify-revf.ts
+ create mode 100644 src/lib/mission/events.ts
+
+diff --git a/docs/DESIGN_NOTES.md b/docs/DESIGN_NOTES.md
+index f8e845d..145927e 100644
+--- a/docs/DESIGN_NOTES.md
++++ b/docs/DESIGN_NOTES.md
+@@ -223,13 +223,23 @@ distributions**; the manifest is a reading room, not an editor.
+ 
+ ---
+ 
+-## 5. ROADMAP — In-system probe campaign
++## 5. ROADMAP — The survey campaign & the orbital-first doctrine
+ 
+-**Concept**: after the flyby probe's coarse data, allocate **dedicated mapping
+-and sampler probes** during transit (gives the long-transit screen something to
+-do); their data layers resolve on approach.
++The mission is not a landing with support infrastructure; it is an
++**orbital industrial colonization** that may — optionally, later — put a
++branch office down a gravity well. The survey campaign exists to tell us
++which well, and whether.
+ 
+-What colonists actually want, mapped to real instrument classes:
++### 5.1 Campaign waves — what is sent, and when
++
++| Wave | When | What | Data it returns |
++| --- | --- | --- | --- |
++| 0 — Precursors | 2060s–90s, Earth-launched (canon) | Gram-scale laser sail swarms + precursor interferometry | the coarse system data on the STAR screen — this is where "known worlds" come from; mass/orbit only |
++| 1 — The courier | 2098, ship-launched at Jovian departure | The VLBI probe (120 t on a ~380 t torch stage, 0.135 c — it has its OWN exhaust and magsail) | survey-grade imagery from a captured orbit, arriving ~25–30 yr ahead of the ship; its laser downlink overtakes us years before arrival |
++| 2 — The micro-swarm | launched from the ship during transit (years 3–10) | The table below — small coasters, one instrument each | one dossier layer per probe, resolving on approach |
++| 3 — Arrival infrastructure | system entry, before any surface contact | SEED-robotics: relay constellation, ISRU survey crawlers on the chosen moon/asteroid | the comms/power backbone for everything after |
++
++What Wave-2 colonists actually want, mapped to real instrument classes:
+ 
+ | Probe | Instrument analog | Buys | Feeds |
+ | --- | --- | --- | --- |
+@@ -240,12 +250,88 @@ What colonists actually want, mapped to real instrument classes:
+ | Radiation/magnetometer orbiter | particle + magnetometer suite | belt mapping | regolith shielding depth |
+ | Relay satellite | comms | surface ops radius | colony automation |
+ 
+-**Design hook — probes cost payload mass on the equipment screen**: certainty
+-vs cargo is the trade. And probe results can **contradict the flyby estimate**
+-(the atmosphere measured at 0.8 atm on flyby reads 0.3 atm on entry) — probes
++**Design hook — every wave costs payload mass on the equipment screen**:
++certainty vs cargo is the trade. Wave-2 results can **contradict the courier**
++(the atmosphere the courier read at 0.8 atm reads 0.3 atm on entry) — probes
+ buy *certainty*, not just data. Land blind and every unknown becomes a
+ colony-start risk event drawn from the seed.
+ 
++### 5.2 Where the hardware goes — destinations by what they're for
++
++The system survey isn't "scan the planet"; it's an infrastructure survey.
++Specialized assets go to specialized places:
++
++- **Gas giant (if present)** — the volatiles & fuel depot: He-3 skimming for
++  the next generation of ships, radiation-belt mapping (hazard), icy moons
++  (water, organics). A cold Jupiter like ε Ind b is a gift: it shepherds the
++  small bodies into reachable families.
++- **Asteroid belts / debris disks** (ε Eri is the archetype) — metals,
++  feedstock, low-Δv industry. The first factory goes here, not on the planet.
++- **Icy moons & comets** — water and propellant. Every kilogram of shielding
++  and reaction mass that doesn't come up a gravity well.
++- **The scorched inner world** — beamed-power site: thin atmosphere, brutal
++  insolation, nobody lives there, and it can beam power anywhere in-system.
++- **L4/L5 & high orbits of the HZ world** — the relay constellation, staging
++  depots, the quarantine station (see 5.5).
++- **The HZ world itself** — last, not first. Sealed bio-assay before any
++  open-cycle contact (the abiotic-O₂ branch, engine.ts REV F).
++
++### 5.3 The orbital-first doctrine
++
++The user-facing thesis: **stay out of the well until the well is worth it.**
++Surface-to-orbit costs 8–9 km/s every round trip; asteroid rendezvous from
++interplanetary arrival costs a fraction of that, and nothing you build in
++orbit falls down. Consequences for the game:
++
++- The SEED lander stays mandatory for the *surface branch* but the
++  **PLANET screen becomes a DESTINATION screen**: a world, a moon, or an
++  orbit is a valid target.
++- **The Exodus never lands.** She is the founding orbital asset — the
++  reactor, the machine shop, the genetic archive, and the only hull rated
++  for the interstellar medium. Parking her in a graveyard orbit is doctrine.
++- Surface packages become *exports* from orbital industry, not imports
++  from orbit: the first thing the asteroid factory builds is the landing
++  gear for everything after it.
++
++### 5.4 Spacers — the crew who refuse the well
++
++Some fraction of the 207 will elect never to make planetfall even when it's
++available: the shipyard crews, the refinery watch, the relay maintainers —
++and their children, who will be multigenerational by simple arithmetic
++(Proxima-class transits are 60–140 yr; the colony's second generation is
++born in orbit regardless). Design consequences:
++
++- The crew manifest gains an **allocation question** (surface vs orbital
++  cohort split), sharing UI language with the payload budget.
++- Population genetics quietly favors the split: two semi-isolated
++  populations (orbital + surface) exchange migrants and keep a much larger
++  effective population than either alone.
++- HALCYON gets a line about it, because of course he does.
++
++### 5.5 What the player is managing (the tradeoff graph)
++
++- **Certainty vs mass** — probes and assay capability against tonnes of
++  colony. (Live today: VLBI, science lander.)
++- **Redundancy vs margin** — shipshop + torpor reserve batteries vs more
++  of everything else; the transit-events system prices the choice.
++- **Surface vs orbital** — where the industrial mass goes (5.3).
++- **Present vs future** — He-3 from the gas giant only matters if someone
++  builds the second ship. The endgame question: does this colony launch
++  its own Exodus?
++- **Quarantine vs speed** — the abiotic-O₂ world: assay it slowly with a
++  bio-cabinet, or accept the risk and settle fast.
++
++### 5.6 How the plan changes by system (the payoff)
++
++| System archetype | Example | The plan bends toward |
++| --- | --- | --- |
++| Flare M dwarf | Proxima, Wolf 359 | orbital + terminator-string outposts; shielding mass over lander mass; SPS over surface solar |
++| Quiet M/K dwarf | Ross 128, Lacaille 9352, ε Ind | cheap surface branch possible; still assay-first (abiotic O₂ risk is highest here) |
++| G-twin | τ Cet, α Cen A | the textbook surface-first case — if the debris disk cooperates |
++| Young dusty K dwarf | ε Eri | asteroid industry first; dust-hardened relays; the best factory site in the catalog |
++| Giant-bearing system | ε Ind, ε Eri | volatiles economy; He-3 option; radiation-belt survey before anything else |
++| No viable world at all | (possible) | pure orbital colony — the free-fort; the PLANET screen's honest answer is "none of these, take the belt" |
++
+ ---
+ 
+ ## 6. Conventions & file map
+@@ -257,6 +343,7 @@ colony-start risk event drawn from the seed.
+ | `hal-mono` / `hal-display` | IBM Plex Mono body / weight-600 annotation |
+ | `src/app/globals.css` | instrument layer: grid-paper, CRT overlay, draw-on, blueprint classes (`bp-*`) |
+ | `src/lib/mission/engine.ts` | `mulberry32`, `hashString`, seeded system generation |
++| `src/lib/mission/events.ts` | seeded transit failures — equipment-dependent outcomes (REV F) |
+ | `src/lib/mission/equipment.ts` | payload catalog + capacities |
+ | `src/lib/mission/ship.ts` | ship architecture — `STOWAGE`, `BAYS`, `RACK`; shared by the blueprint, the crew manifest, and the future hangar view |
+ | `src/lib/mission/crew.ts` | the 207-soul roster — coverage-guaranteed cohorts, address-keyed seeds, load-time assertions |
+@@ -280,3 +367,119 @@ the ship is a document, and documents have drawing numbers.
+   into the existing dossier?
+ - Multiplayer/archive hook: publish the final mission profile as a shareable
+   seed string?
++
++---
++
++## 8. REALISM PASS — REV F (implemented)
++
++The 2026 realism audit, implemented and verified (`scripts/verify-revf.ts`).
++The charter bar — "honest to mission-design sketch level" — was applied to
++the whole transit chain. Numbers below are computed, not quoted.
++
++### 8.1 The ship can now stop — magsail architecture (`astro.ts`)
++
++The old model cruised at 0.1 c and simply… arrived. The 12.4 % propellant
++reserve only buys 7,471 km/s (0.025 c); stopping on it alone needs an
++exhaust velocity of 0.47 c. **Fix (Zubrin/Andrews):** a magsail — ram drag
++against the ISM, propellantless. `a = a₀(v/v₀)²` ⇒ `v(t) = v₀/(1+t/τ′)`;
++a₀ = 0.25 m/s² at 0.1 c (≈1,900 km superconducting loop on our 62 kt
++burnout mass), deployed **0.77 ly out**, braking 29,979 → 4,000 km/s over
++**24.7 yr**, then the fusion reserve finishes the capture burn with ~44 %
++margin. Braking the last factor of ten in speed would take another century —
++documented as the honest architecture. New phases: `MAGSAIL`, `CAPTURE`.
++
++New canon transit totals (TJI 2.7 + torch 2.0 + cruise + brake 24.7 + 0.3):
++
++Proxima 63.6 yr · Barnard 80.7 · Wolf 359 99.7 · ε Eri 125.9 ·
++τ Cet 140.2 (was 45.2 / 62.4 / 81.3 / 107.2 / 121.9 — the brake is the
++difference; the crew sleeps through it).
++
++### 8.2 The torch is sustained, not impulsive
++
++An 18-day 0.1 c burn ⇒ ~2 GN thrust, ~34 PW jet power, ~1,200 km² of
++radiator: nonsense. **Fix:** `BURN_YEARS = 2.0` (Daedalus-class staging) ⇒
++jet power ~0.9 TW, thermal rejection ~34 km² of 1,450 K droplet curtain.
++The blueprint radiators are redrawn as droplet curtains with drafting-break
++symbols and honest area labels (GA drawing REV E → REV F).
++
++This also settles the Sundiver question: **a perihelion Oberth dive was
++considered and rejected** — Oberth multiplies impulsive burns and does
++nothing for a two-year torch. The Jovian flyby keeps its real job: bending
++the escape asymptote 115.8° toward a high-declination target (the assist's
++worth is direction, not the 5.7 km/s).
++
++### 8.3 Cold sleep is torpor — 281 K, not 4 K
++
++4.1 K against 300 K bay walls is Carnot COP 0.014 (72 W per watt removed)
++and km² of 4 K radiator: thermodynamic fantasy. **Fix:** therapeutic torpor
++at ~281 K (+8 °C) — SpaceWorks-NIAC-style hypothermia with periodic wake
++cycles. The sailors' jargon stays ("cold sleep"); every *measurement* on
++screen now says TORPOR and reads 281.x K. `ship.ts` documents the physics.
++
++### 8.4 Relativistic & light-lag plate @ 0.1 c
++
++New telemetry (`astro.ts` + transit screen): **ship proper time** τ = ∫dt/γ
++(Proxima saves 0.19 yr of crew aging — τ and T+ now differ on the dial);
++**β**; **Sol beacon Doppler** — the 8.4 GHz Earth archive beacon received
++at 7.60 GHz during cruise, drifting back up as the magsail bites; one-way
++light time growing from hours to decades (stat row + `fmtRange` in LY).
++
++### 8.5 Proper motion & the intercept lead (`stars.ts`)
++
++All 16 stars now carry real Gaia DR3 / Hipparcos proper motions (mas/yr).
++The ship aims **ahead of the visual position**: Barnard's Star (10.39″/yr,
++90 km/s tangential) moves 1,647 AU between launch and intercept — lead
++angle 0.25°; Lacaille 9352 3,150 AU (0.27°); τ Cet 1,068 AU. Star dossier
++rows (PROPER MOTION · INTERCEPT LEAD), the **PLOT 03-D intercept inset** on
++the transit plate (visual cross vs intercept ring, offset honestly labelled
++~×10³), and HALCYON's aim-ahead line for stars with >500 AU of lead.
++
++### 8.6 The decades are not kind — transit events (`events.ts`)
++
++Seeded, deterministic from star + manifest: Whipple-stack grain strikes,
++torpor-bay bus brownouts (absorbed **iff** the reserve battery is aboard),
++radiator curtain ruptures (remanufactured **iff** the shipshop is aboard),
++cargo-cell strikes (feedstock reclaimed iff…), HALCYON core transients, ISM
++density fronts. New equipment: **SHIPBOARD REMANUFACTURING SHOP** (85 t,
++rack V1-10/11, stamp RMS) — spares are dead mass, feedstock is alive.
++Manifest is now 2,160 t vs 1,760 t capacity. Also new: **Whipple-shield
++erosion budget** telemetry (v³-weighted dose, τ = 300 yr: 89 % margin at
++Proxima, 69 % at τ Cet).
++
++### 8.7 Abiotic O₂ — the ambiguous garden world (`engine.ts`)
++
++Free O₂ around late-K/M dwarfs can be pre-main-sequence water-loss residue
++(Luger & Barnes 2015), not biology. Breathable worlds around <0.75 M☉ now
++carry `abioticRisk`; the dossier shows the quarantine box; the prognosis
++carries a BIO-SIGNATURE RESOLVE factor (+2 with the science lander's
++bio-cabinet, −6 without); HALCYON refuses to shake hands with anything.
++Flare class now gates oxygen (quiet stars keep atmospheres; flare stars
++rarely do). In the current seed: ε Eri IV is a true biotic garden (71/100,
++−1 °C); 61 Cyg III is the ambiguous one (43/100, free O₂, origin unresolved).
++
++### 8.8 Greenhouse & albedo calibration (`engine.ts`)
++
++Equilibrium temperature now uses albedo 0.3 (254.6 K at 1 AU — was 278.6,
++which is the albedo-zero value) and greenhouse ΔT = 33·√p K (Earth: +15 °C
++exactly; Mars ~3 K at 6 mbar), collapsing outside the HZ. The old model put
++Earth at 9.7 °C and needed the ≥48 suitability fudge to rescue frozen
++worlds; the new one lands HZ worlds between −40 and +32 °C on its own.
++
++### 8.9 Verified
++
++`npx tsc --noEmit` clean; `npm run build` clean; module-load assertions
++pass (bay arithmetic, rack addresses, portraits doctrine);
++`scripts/verify-revf.ts` confirms: phase boundaries, magsail velocity
++curve, proper-time integration, beacon Doppler, shield margin, intercept
++geometry, per-star viable candidates (16/16 ≥ 48), and the KE line (29.8×
++the 2098 impactor — HALCYON rounds to thirty).
++
++Visual QA (dev tooling, `playwright-core` dev dep): `scripts/smoke-visual.mjs`
++clicks INTRO→BOOT→STAR→EQUIP→CREW→TRANSIT→PLANET→PROFILE against
++`next start` and screenshots every changed screen;
++`scripts/check-labels.mjs` asserts every blueprint text label's `getBBox()`
++fits the viewBox; `scripts/check-geometry.mjs` asserts the radiator panels
++never intersect the aft tanks/stages/labels in screen space (0 overlaps).
++Screenshots were reviewed by VLM for collisions — three real layout bugs
++were found and fixed this way (radiator stubs crossing the drop-stages,
++the intercept-inset label placements, the thermal-rejection label site).
+diff --git a/package-lock.json b/package-lock.json
+index 1205754..1da67d1 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -24,6 +24,7 @@
+         "@types/react-dom": "^19",
+         "eslint": "^9",
+         "eslint-config-next": "^16.1.1",
++        "playwright-core": "^1.64.1",
+         "tailwindcss": "^4",
+         "typescript": "^5"
+       }
+@@ -5657,6 +5658,19 @@
+         "url": "https://github.com/sponsors/jonschlinkert"
+       }
+     },
++    "node_modules/playwright-core": {
++      "version": "1.64.1",
++      "resolved": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.64.1.tgz",
++      "integrity": "sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==",
++      "dev": true,
++      "license": "Apache-2.0",
++      "bin": {
++        "playwright-core": "cli.js"
++      },
++      "engines": {
++        "node": ">=20"
++      }
++    },
+     "node_modules/possible-typed-array-names": {
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/possible-typed-array-names/-/possible-typed-array-names-1.1.0.tgz",
+diff --git a/package.json b/package.json
+index 43dc713..e6e07de 100644
+--- a/package.json
++++ b/package.json
+@@ -25,6 +25,7 @@
+     "@types/react-dom": "^19",
+     "eslint": "^9",
+     "eslint-config-next": "^16.1.1",
++    "playwright-core": "^1.64.1",
+     "tailwindcss": "^4",
+     "typescript": "^5"
+   }
+diff --git a/scripts/check-breathable.ts b/scripts/check-breathable.ts
+new file mode 100644
+index 0000000..95f89cb
+--- /dev/null
++++ b/scripts/check-breathable.ts
+@@ -0,0 +1,9 @@
++import { STARS } from "../src/lib/mission/stars";
++import { generateSystem } from "../src/lib/mission/engine";
++for (const s of STARS) {
++  const ps = generateSystem(s);
++  for (const p of ps) {
++    if (p.atmosphere.breathable)
++      console.log(`${s.shortName} ${p.designation} suit=${p.suitability} temp=${p.tempC.toFixed(0)}C mass=${s.massSolar} abiotic=${p.abioticRisk}`);
++  }
++}
+diff --git a/scripts/check-geometry.mjs b/scripts/check-geometry.mjs
+new file mode 100644
+index 0000000..6538788
+--- /dev/null
++++ b/scripts/check-geometry.mjs
+@@ -0,0 +1,36 @@
++// Decisive geometry check: do the radiator panel bboxes intersect the aft
++// tank/stage bboxes in the rendered SVG? (getBoundingClientRect in SVG user
++// space via getBBox on the transformed groups.)
++import { chromium } from "playwright-core";
++const browser = await chromium.launch({ executablePath: "/home/z/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome", args: ["--no-sandbox", "--disable-dev-shm-usage"] });
++const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
++await page.goto("http://localhost:3111/", { waitUntil: "networkidle" });
++await page.waitForSelector('[aria-label="Skip intro"]', { timeout: 20000 });
++await page.locator('[aria-label="Skip intro"]').click();
++await page.waitForSelector("text=INITIATE MISSION START SEQUENCE", { timeout: 30000 });
++await page.getByRole("button", { name: /INITIATE MISSION START/i }).click();
++await page.waitForSelector("text=61 CYGNI A");
++await page.getByRole("button", { name: /61 CYGNI A/ }).click();
++await page.waitForTimeout(600);
++await page.getByRole("button", { name: /COMMIT DESTINATION/i }).click();
++await page.waitForTimeout(1200);
++await page.getByRole("button", { name: /FULL SHIP/i }).click();
++await page.waitForTimeout(1600);
++const result = await page.evaluate(() => {
++  const svg = document.querySelector('svg[aria-label^="General arrangement"]');
++  const R = (el) => el.getBoundingClientRect();
++  const hit = (a, b) => !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
++  const panels = [...svg.querySelectorAll("g")].filter((g) => /translate\(168,/.test(g.getAttribute("transform") ?? "")).map(R);
++  const tanks = [...svg.querySelectorAll("circle.bp-copper")].map(R);
++  const stages = [...svg.querySelectorAll("rect.bp-copper")].map(R);
++  const labels = [...svg.querySelectorAll("text.bp-txt")].map(R);
++  const overlaps = [];
++  panels.forEach((p, i) => {
++    tanks.forEach((t, j) => { if (hit(p, t)) overlaps.push(`panel ${i} × tank ${j}`); });
++    stages.forEach((r, j) => { if (hit(p, r)) overlaps.push(`panel ${i} × stage ${j}`); });
++    labels.forEach((l, k) => { if (hit(p, l)) overlaps.push(`panel ${i} × label ${k} "${labels[k] ? "" : ""}"`); });
++  });
++  return { panelCount: panels.length, overlaps };
++});
++console.log(JSON.stringify(result, null, 1));
++await browser.close();
+diff --git a/scripts/check-labels.mjs b/scripts/check-labels.mjs
+new file mode 100644
+index 0000000..07f4ecc
+--- /dev/null
++++ b/scripts/check-labels.mjs
+@@ -0,0 +1,30 @@
++import { chromium } from "playwright-core";
++const browser = await chromium.launch({ executablePath: "/home/z/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome", args: ["--no-sandbox", "--disable-dev-shm-usage"] });
++const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
++await page.goto("http://localhost:3111/", { waitUntil: "networkidle" });
++await page.waitForSelector('[aria-label="Skip intro"]', { timeout: 20000 });
++await page.locator('[aria-label="Skip intro"]').click();
++await page.waitForSelector("text=INITIATE MISSION START SEQUENCE", { timeout: 30000 });
++await page.getByRole("button", { name: /INITIATE MISSION START/i }).click();
++await page.waitForSelector("text=61 CYGNI A");
++await page.getByRole("button", { name: /61 CYGNI A/ }).click();
++await page.waitForTimeout(600);
++await page.getByRole("button", { name: /COMMIT DESTINATION/i }).click();
++await page.waitForTimeout(1500);
++await page.getByRole("button", { name: /FULL SHIP/i }).click();
++await page.waitForTimeout(1500);
++const overflows = await page.evaluate(() => {
++  const svg = document.querySelector('svg[aria-label^="General arrangement"]');
++  const vb = svg.getAttribute("viewBox").split(" ").map(Number);
++  const [x0, y0, w, h] = vb;
++  const bad = [];
++  svg.querySelectorAll("text").forEach((t) => {
++    const b = t.getBBox();
++    if (b.x < x0 - 0.5 || b.y < y0 - 0.5 || b.x + b.width > x0 + w + 0.5 || b.y + b.height > y0 + h + 0.5) {
++      bad.push({ text: t.textContent.slice(0, 40), x: +b.x.toFixed(1), right: +(b.x + b.width).toFixed(1), y: +b.y.toFixed(1), bottom: +(b.y + b.height).toFixed(1) });
++    }
++  });
++  return { viewBox: vb, count: svg.querySelectorAll("text").length, bad };
++});
++console.log(JSON.stringify(overflows, null, 1));
++await browser.close();
+diff --git a/scripts/smoke-visual.mjs b/scripts/smoke-visual.mjs
+new file mode 100644
+index 0000000..ed27c03
+--- /dev/null
++++ b/scripts/smoke-visual.mjs
+@@ -0,0 +1,71 @@
++// Visual smoke test — clicks through to the changed screens and screenshots them.
++import { chromium } from "playwright-core";
++
++const BASE = "http://localhost:3111";
++const OUT = "/tmp/render";
++const exe = "/home/z/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome";
++
++const browser = await chromium.launch({
++  executablePath: exe,
++  args: ["--no-sandbox", "--disable-dev-shm-usage"],
++});
++const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
++page.on("pageerror", (e) => console.log("PAGE ERROR:", e.message));
++
++const shot = (name) => page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
++const btn = async (text) => {
++  await page.getByRole("button", { name: new RegExp(text, "i") }).first().click();
++};
++
++await page.goto(BASE, { waitUntil: "networkidle" });
++// INTRO → skip (wait for the button to exist, then click)
++await page.waitForSelector('[aria-label="Skip intro"]', { timeout: 20000 });
++await page.locator('[aria-label="Skip intro"]').click();
++await page.waitForTimeout(1200);
++
++// BOOT → initiate (wait for the button to appear after boot lines)
++await page.waitForSelector("text=INITIATE MISSION START SEQUENCE", { timeout: 30000 });
++await btn("INITIATE MISSION START");
++await page.waitForTimeout(1000);
++
++// STAR → pick 61 CYG (abiotic O2 world in this seed), commit
++await page.waitForSelector("text=61 CYGNI A");
++await page.getByRole("button", { name: /61 CYGNI A/ }).click();
++await page.waitForTimeout(800);
++await shot("01-star-dossier");
++await btn("COMMIT DESTINATION");
++await page.waitForTimeout(1500);
++
++// EQUIP → toggle VLBI + science lander + shipshop, confirm
++for (const label of ["VLBI DEEP-SPACE", "SCIENCE LANDER", "SHIPBOARD REMANUFACTURING"]) {
++  await page.getByRole("button", { name: new RegExp(label, "i") }).first().click();
++  await page.waitForTimeout(400);
++}
++await page.evaluate(() => window.scrollTo(0, 0));
++await page.waitForTimeout(800);
++await page.getByRole("button", { name: /FULL SHIP/i }).click();
++await page.waitForTimeout(1400); // camera tween
++await shot("02-equip-blueprint");
++await btn("CONFIRM PAYLOAD");
++await page.waitForTimeout(1200);
++
++// CREW → proceed
++await btn("PROCEED TO TRANSIT");
++await page.waitForTimeout(9000); // let the draw-on complete and counter settle
++await page.evaluate(() => window.scrollTo(0, 0));
++await shot("03-transit-plate");
++await page.waitForTimeout(9000);
++await shot("04-transit-magsail-lines");
++await page.waitForTimeout(16000);
++
++// PLANET → open the ambiguous world dossier
++await page.waitForSelector("text=61CYG-III", { timeout: 30000 });
++await page.getByRole("button", { name: /61CYG-III/ }).click();
++await page.waitForTimeout(1500);
++await shot("05-planet-abiotic");
++await btn("DESIGNATE LANDING SITE");
++await page.waitForTimeout(1500);
++await shot("06-profile");
++
++await browser.close();
++console.log("done — screenshots in /tmp/render/");
+diff --git a/scripts/verify-revf.ts b/scripts/verify-revf.ts
+new file mode 100644
+index 0000000..24a833a
+--- /dev/null
++++ b/scripts/verify-revf.ts
+@@ -0,0 +1,121 @@
++// Runtime verification of the REV F realism pass — prints the new canon numbers
++// and checks the planet generator still yields a viable candidate per star.
++import { STARS, interceptSolution, transitYears } from "../src/lib/mission/stars";
++import {
++  TRANSFER,
++  BURN_YEARS,
++  BURN_DISTANCE_LY,
++  MAG_TAU_YR,
++  MAG_DEPLOY_LY,
++  MAG_YEARS,
++  phaseBoundaries,
++  missionState,
++  properTimeYears,
++  solBeaconRxGhz,
++  shieldMarginPct,
++  kineticEnergyJ,
++} from "../src/lib/mission/astro";
++import { generateSystem } from "../src/lib/mission/engine";
++import { transitEvents } from "../src/lib/mission/events";
++import { EQUIPMENT } from "../src/lib/mission/equipment";
++
++const W = (s: string) => String(s).padEnd(12).slice(0, 12);
++
++console.log("═══ DEPARTURE ═══");
++console.log(
++  `TJI ${TRANSFER.years.toFixed(2)} yr · flyby δ ${TRANSFER.deltaDeg.toFixed(1)}° · exit ${TRANSFER.exitSpeedKms.toFixed(1)} km/s`
++);
++console.log(
++  `torch ${BURN_YEARS.toFixed(1)} yr · burn distance ${BURN_DISTANCE_LY.toFixed(3)} ly`
++);
++console.log(
++  `magsail: τ'=${MAG_TAU_YR.toFixed(2)} yr · deploy ${MAG_DEPLOY_LY.toFixed(3)} ly out · brake ${MAG_YEARS.toFixed(1)} yr`
++);
++
++console.log("\n═══ TRANSIT TABLE (new canon) ═══");
++console.log(
++  [W("STAR"), "LY", "TJI+TORCH", "CRUISE", "MAGSAIL", "TOTAL", "PROPER τ", "Δτ", "SHIELD", "AIM AU", "LEAD°"].join(" · ")
++);
++for (const s of STARS) {
++  const pb = phaseBoundaries(s.distanceLy);
++  const T = pb.tTotal;
++  const tau = properTimeYears(s.distanceLy, T);
++  const shield = shieldMarginPct(s.distanceLy, T);
++  const icpt = interceptSolution(s);
++  console.log(
++    [
++      W(s.shortName),
++      s.distanceLy.toFixed(2),
++      (pb.tBurnEnd).toFixed(1),
++      (pb.tCruiseEnd - pb.tBurnEnd).toFixed(1),
++      (pb.tMagEnd - pb.tCruiseEnd).toFixed(1),
++      T.toFixed(1),
++      tau.toFixed(1),
++      (T - tau).toFixed(2),
++      shield.toFixed(0) + "%",
++      Math.round(icpt.aimAu).toLocaleString(),
++      icpt.leadAngleDeg.toFixed(2),
++    ].join(" · ")
++  );
++}
++
++console.log("\n═══ MID-TRANSIT STATE CHECKS (Proxima, Barnard, Tau Ceti) ═══");
++for (const id of ["proxima", "barnard", "tauceti"]) {
++  const s = STARS.find((x) => x.id === id)!;
++  const pb = phaseBoundaries(s.distanceLy);
++  const mid = pb.tBurnEnd + (pb.tCruiseEnd - pb.tBurnEnd) / 2;
++  const st = missionState(s.distanceLy, mid);
++  console.log(
++    `${W(s.shortName)} t=${mid.toFixed(1)}: ${st.phase} v=${Math.round(st.velKms).toLocaleString()} km/s β=${st.beta.toFixed(4)} beacon=${solBeaconRxGhz(st.velKms).toFixed(2)} GHz prop=${st.propPct.toFixed(1)}%`
++  );
++  const magMid = pb.tCruiseEnd + MAG_YEARS / 2;
++  const mst = missionState(s.distanceLy, magMid);
++  console.log(
++    `${W("")} t=${magMid.toFixed(1)}: ${mst.phase} v=${Math.round(mst.velKms).toLocaleString()} km/s remaining=${mst.remainingLy.toFixed(3)} ly`
++  );
++  const done = missionState(s.distanceLy, pb.tTotal + 1);
++  console.log(
++    `${W("")} end: ${done.phase} v=${done.velKms.toFixed(0)} km/s prop=${done.propPct.toFixed(1)}%`
++  );
++}
++
++console.log("\n═══ PLANET GENERATOR SANITY (albedo+greenhouse fix) ═══");
++let allOk = true;
++for (const s of STARS) {
++  const planets = generateSystem(s);
++  const landable = planets.filter((p) => p.landable);
++  const best = landable.length
++    ? landable.reduce((a, b) => (b.suitability > a.suitability ? b : a))
++    : null;
++  const abiotic = planets.filter((p) => p.abioticRisk).length;
++  const ok = best && best.suitability >= 48;
++  if (!ok) allOk = false;
++  console.log(
++    `${W(s.shortName)} n=${planets.length} landable=${landable.length} best=${best ? best.designation + " " + best.suitability + "/100 " + best.tempC.toFixed(0) + "C" : "NONE"}${abiotic ? ` · abiotic-O2 worlds: ${abiotic}` : ""}${ok ? "" : "  <<< BELOW VIABILITY"}`
++  );
++}
++console.log(allOk ? "all stars have a ≥48 viable candidate ✓" : "VIABILITY FAILURES ✗");
++
++console.log("\n═══ EVENTS (Proxima, full manifest vs bare) ═══");
++const full = EQUIPMENT.map((e) => e.id);
++const bare = ["seed"];
++for (const [label, eq] of [
++  ["FULL MANIFEST", full],
++  ["BARE (seed only)", bare],
++] as const) {
++  const evs = transitEvents(STARS[0], [...eq]);
++  console.log(`— ${label} —`);
++  for (const e of evs)
++    console.log(`  Y${e.year.toFixed(1).padStart(6)} [${e.severity}] ${e.code}: ${e.text}`);
++}
++
++console.log("\n═══ NUMBERS QUOTED ELSEWHERE ═══");
++const ke = kineticEnergyJ(1760);
++console.log(
++  `KE at cruise: ${(ke / 2.2e21).toFixed(1)}× the 2098 impactor (HALCYON says thirty)`
++);
++const ve = (29979.2 - TRANSFER.exitSpeedKms) / Math.log(145760 / 61664);
++console.log(`implied exhaust velocity: ${Math.round(ve).toLocaleString()} km/s = ${(ve / 299792.458).toFixed(3)} c`);
++const manifestT = EQUIPMENT.reduce((a, e) => a + e.massT, 0);
++console.log(`manifest total: ${manifestT.toLocaleString()} t vs capacity 1,760 t`);
++console.log(`transitYears check: ${transitYears(STARS[0]).toFixed(1)} (Proxima)`);
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 4a4cd83..77f0c53 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -7,6 +7,7 @@ import { STAR_BY_ID } from "@/lib/mission/stars";
+ import { EQUIPMENT_BY_ID } from "@/lib/mission/equipment";
+ import { generateSystem, formatClock } from "@/lib/mission/engine";
+ import { transitYears } from "@/lib/mission/stars";
++import { TRANSFER, BURN_YEARS } from "@/lib/mission/astro";
+ import { halcyonAudio } from "@/lib/mission/audio";
+ import {
+   HALCYON_EQUIP_OPEN,
+@@ -47,7 +48,7 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
+   },
+   EQUIP: {
+     title: "SHIP EQUIPMENT — PAYLOAD MANIFEST",
+-    sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,075-tonne catalog.",
++    sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,160-tonne catalog.",
+   },
+   CREW: {
+     title: "CREW MANIFEST — COLD-SLEEP ROSTER",
+@@ -148,7 +149,7 @@ export default function OutpostPage() {
+     setHalLine(HALCYON_EQUIP_OPEN);
+     addLog(`DESTINATION COMMITTED — ${s.name} (${s.distanceLy.toFixed(2)} LY)`);
+     addLog(
+-      `TRANSIT SOLUTION — ${Math.round(transitYears(s))} YEARS (TJI + JOVIAN FLYBY + 0.1 C CRUISE)`
++      `TRANSIT SOLUTION — ${Math.round(transitYears(s))} YEARS (TJI + FLYBY + TORCH + CRUISE + MAGSAIL BRAKE + CAPTURE)`
+     );
+     addLog(halcyonStarCommitted(s));
+   };
+@@ -164,7 +165,7 @@ export default function OutpostPage() {
+     addLog(
+       `PAYLOAD CONFIRMED — ${equipmentItems.length} ITEMS / ${equipmentItems.reduce((a, e) => a + e.massT, 0)} T`
+     );
+-    addLog("DEPARTURE PROFILE — TJI BURN 8.80 KM/S · JOVIAN ASSIST δ 115.8° · C3 ESCAPE 0.100 C");
++    addLog(`DEPARTURE PROFILE — TJI Δv ${TRANSFER.dvTjiKms.toFixed(2)} KM/S · JOVIAN δ ${TRANSFER.deltaDeg.toFixed(1)}° · TORCH ${BURN_YEARS.toFixed(1)} YR → 0.100 C`);
+     addLog(HALCYON_PAYLOAD_OK);
+     setHalLine(HALCYON_CREW_OPEN);
+   };
+@@ -370,6 +371,7 @@ export default function OutpostPage() {
+             planets={planets}
+             hasProbe={hasProbe}
+             payloadMassT={equipmentItems.reduce((a, e) => a + e.massT, 0)}
++            equipment={equipment}
+             onDone={finishTransit}
+             onSpeak={speak}
+           />
+diff --git a/src/lib/mission/astro.ts b/src/lib/mission/astro.ts
+index b556de5..237fdcd 100644
+--- a/src/lib/mission/astro.ts
++++ b/src/lib/mission/astro.ts
+@@ -27,6 +27,17 @@ export const CRUISE_C = 0.1;
+ export const CRUISE_KMS = CRUISE_C * C_KMS; // 29,979 km/s
+ export const BURN_DIST_AU = 0.52; // fusion ignition distance past Jupiter
+ 
++// ── Torch burn (REV F): sustained, not impulsive ──
++// A 0.1 c Δv in eighteen days would demand ~2 GN of thrust and ~34 PW of jet
++// power — radiators of ~1,200 km². Stretched to two years (Daedalus-class
++// staging) the jet power is ~0.9 TW and thermal rejection is ~34 km² of
++// 1,450 K droplet curtain — still the dominant feature of the ship, which is
++// the honest answer. The multi-year burn is also why there is no perihelion
++// Oberth "Sundiver" dive instead: Oberth multiplies impulsive burns, and does
++// nothing for a two-year torch. The Jovian flyby keeps its real job — bending
++// the escape asymptote toward a high-declination target.
++export const BURN_YEARS = 2.0;
++
+ /** Perihelion of the TJI ellipse on the departure plate (math convention). */
+ export const DEPART_ANGLE_DEG = 155;
+ 
+@@ -149,7 +160,13 @@ export function transferSpeedKms(theta: number): number {
+ 
+ // ── Piecewise mission state — one function of mission time ───────────────────
+ 
+-export type MissionPhase = "TJI" | "FLYBY" | "BURN" | "CRUISE";
++export type MissionPhase =
++  | "TJI"
++  | "FLYBY"
++  | "BURN"
++  | "CRUISE"
++  | "MAGSAIL"
++  | "CAPTURE";
+ 
+ export interface MissionState {
+   phase: MissionPhase;
+@@ -157,67 +174,243 @@ export interface MissionState {
+   velKms: number; // heliocentric speed
+   remainingLy: number; // range to destination
+   propPct: number; // fusion stockpile remaining
++  beta: number; // v/c — for the relativistic plate
+ }
+ 
+-const T_BLEND = 0.05; // years of screen-time smoothing across flyby + burn
++// Torch-burn velocity profile, p ∈ [0,1] across BURN_YEARS: the flyby ramp to
++// the post-assist exit speed, then the long climb to cruise. Same shape the
++// old 18-day blend had — the ramp physics did not change, only its duration.
++const smooth = (t: number) => t * t * (3 - 2 * t);
++const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
++const FLYBY_FRAC = 0.05; // of the burn window; the flyby itself is ~18 days
++function burnSpeedKms(p: number): number {
++  const q = Math.min(1, Math.max(0, p));
++  if (q < FLYBY_FRAC) {
++    const s = smooth(q / FLYBY_FRAC);
++    return TRANSFER.vAphiKms + (TRANSFER.exitSpeedKms - TRANSFER.vAphiKms) * s;
++  }
++  const s = smooth((q - FLYBY_FRAC) / (1 - FLYBY_FRAC));
++  return TRANSFER.exitSpeedKms + (CRUISE_KMS - TRANSFER.exitSpeedKms) * s;
++}
+ 
+-/** Total mission duration: departure leg + flyby/burn blend + 0.1 c cruise. */
+-export function totalYears(distanceLy: number): number {
+-  return TRANSFER.years + T_BLEND + distanceLy / CRUISE_C;
++// Integrated once at module load: distance, proper time and erosion dose
++// across the burn. Star-independent — the profile depends only on Jupiter.
++const BURN_PROFILE = (() => {
++  const N = 2048;
++  const cumKm = new Float64Array(N + 1);
++  const cumTau = new Float64Array(N + 1); // proper time, yr
++  const cumDose = new Float64Array(N + 1); // erosion dose, v³-weighted yr
++  const dtYr = BURN_YEARS / N;
++  for (let i = 1; i <= N; i++) {
++    const v = burnSpeedKms((i - 0.5) / N);
++    cumKm[i] = cumKm[i - 1] + v * dtYr * SEC_PER_YEAR;
++    cumTau[i] = cumTau[i - 1] + dtYr * Math.sqrt(1 - (v / C_KMS) ** 2);
++    cumDose[i] = cumDose[i - 1] + dtYr * (v / CRUISE_KMS) ** 3;
++  }
++  return { N, cumKm, cumTau, cumDose, totalKm: cumKm[N], totalTau: cumTau[N] };
++})();
++
++export const BURN_DISTANCE_LY = BURN_PROFILE.totalKm / LY_KM; // ≈ 0.06 ly
++export const BURN_END_RANGE_AU = JUPITER_ORBIT_AU + BURN_PROFILE.totalKm / AU_KM;
++
++// ── Magnetic sail — how a 0.1 c ship stops (Zubrin & Andrews) ────────────────
++// Drag against the ISM is propellantless: a = a₀(v/v₀)², so v(t) = v₀/(1+t/τ′)
++// with τ′ = v₀/a₀. Sketch-level constants: a₀ = 0.25 m/s² at 0.1 c wants a
++// ~1,900 km superconducting loop on our 62 kt burnout mass in local-cloud
++// densities (~0.3/cm³, magnetic-interaction cross-section of a few loop
++// radii). The sail brakes 0.1 c → 4,000 km/s; the 12.4% fusion reserve then
++// finishes the capture burn with ~44% margin. Braking the last factor of ten
++// in speed would take another century — this is the honest architecture, not
++// a convenient one.
++export const MAG_A0_MS2 = 0.25;
++export const MAG_TAU_YR = (CRUISE_KMS * 1000) / (MAG_A0_MS2 * SEC_PER_YEAR); // ≈ 3.80 yr
++export const MAG_V_ARR_KMS = 4_000;
++export const MAG_RATIO = CRUISE_KMS / MAG_V_ARR_KMS; // ≈ 7.49
++export const MAG_DEPLOY_LY = CRUISE_C * MAG_TAU_YR * Math.log(MAG_RATIO); // ≈ 0.77 ly out
++export const MAG_YEARS = MAG_TAU_YR * (MAG_RATIO - 1); // ≈ 24.7 yr
++export const CAPTURE_YEARS = 0.3; // propulsive trim into a bound orbit
++export const CAPTURE_V_KMS = 40; // post-capture: interplanetary-class speed
++
++// Magsail proper-time profile (fixed shape — constants only, no star)
++const MAG_PROFILE = (() => {
++  const N = 2048;
++  const cumTau = new Float64Array(N + 1);
++  const dtYr = MAG_YEARS / N;
++  for (let i = 1; i <= N; i++) {
++    const u = 1 + ((i - 0.5) / N) * (MAG_YEARS / MAG_TAU_YR);
++    const v = CRUISE_KMS / u;
++    cumTau[i] = cumTau[i - 1] + dtYr * Math.sqrt(1 - (v / C_KMS) ** 2);
++  }
++  return { N, cumTau, totalTau: cumTau[N] };
++})();
++
++/** Phase boundary times (yr since the TJI burn) for a destination `distanceLy` away. */
++export function phaseBoundaries(distanceLy: number) {
++  const tJup = TRANSFER.years;
++  const tBurnEnd = tJup + BURN_YEARS;
++  const cruiseLy = Math.max(0, distanceLy - BURN_DISTANCE_LY - MAG_DEPLOY_LY);
++  const tCruiseEnd = tBurnEnd + cruiseLy / CRUISE_C;
++  const tMagEnd = tCruiseEnd + MAG_YEARS;
++  return {
++    tJup,
++    tBurnEnd,
++    tCruiseEnd,
++    tMagEnd,
++    tTotal: tMagEnd + CAPTURE_YEARS,
++  };
+ }
+ 
+-const smooth = (t: number) => t * t * (3 - 2 * t);
+-const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
++/** Total mission duration: TJI + flyby/torch + cruise + magsail brake + capture. */
++export function totalYears(distanceLy: number): number {
++  return phaseBoundaries(distanceLy).tTotal;
++}
+ 
+ /**
+  * State of the ship at mission time `t` years since the TJI burn.
+- * Phases: transfer ellipse → Jupiter flyby + fusion burn → 0.1 c cruise.
++ * Phases: transfer ellipse → Jupiter flyby + 2 yr torch → 0.1 c cruise →
++ * magsail brake → propulsive capture.
+  */
+ export function missionState(
+   distanceLy: number,
+   t: number
+ ): MissionState {
+-  const tXfer = TRANSFER.years;
+-  if (t < tXfer) {
++  const { tJup, tBurnEnd, tCruiseEnd, tMagEnd } = phaseBoundaries(distanceLy);
++  if (t < tJup) {
+     // Transfer ellipse coast — decelerating climb out of Sol's well
+-    const theta = Math.PI * clamp01(t / tXfer);
++    const theta = Math.PI * clamp01(t / tJup);
++    const v = transferSpeedKms(theta);
+     return {
+       phase: "TJI",
+       rangeAu: transferRangeAu(theta),
+-      velKms: transferSpeedKms(theta),
++      velKms: v,
+       remainingLy: distanceLy,
+       propPct: 100,
++      beta: v / C_KMS,
+     };
+   }
+-  if (t < tXfer + T_BLEND) {
+-    // Flyby + fusion burn: 7.4 → 16.3 → 29,979 km/s, smoothed for display
+-    const p = smooth(clamp01((t - tXfer) / T_BLEND));
+-    const speed =
+-      p < 0.4
+-        ? TRANSFER.vAphiKms +
+-          (TRANSFER.exitSpeedKms - TRANSFER.vAphiKms) * smooth(p / 0.4)
+-        : TRANSFER.exitSpeedKms +
+-          (CRUISE_KMS - TRANSFER.exitSpeedKms) * smooth((p - 0.4) / 0.6);
++  if (t < tBurnEnd) {
++    // Jupiter flyby folding into the two-year torch burn
++    const p = (t - tJup) / BURN_YEARS;
++    const i = Math.min(BURN_PROFILE.N, Math.round(p * BURN_PROFILE.N));
++    const v = burnSpeedKms(p);
+     return {
+-      phase: p < 0.4 ? "FLYBY" : "BURN",
+-      rangeAu: JUPITER_ORBIT_AU + BURN_DIST_AU * p,
+-      velKms: speed,
+-      remainingLy: distanceLy,
++      phase: p < FLYBY_FRAC ? "FLYBY" : "BURN",
++      rangeAu: JUPITER_ORBIT_AU + BURN_PROFILE.cumKm[i] / AU_KM,
++      velKms: v,
++      remainingLy: Math.max(0, distanceLy - BURN_PROFILE.cumKm[i] / LY_KM),
+       propPct: 100 - 87.6 * p,
++      beta: v / C_KMS,
+     };
+   }
+-  // Cruise at 0.100 c — the long silence
+-  const tc = t - tXfer - T_BLEND;
+-  const travelledLy = CRUISE_C * tc;
++  if (t < tCruiseEnd) {
++    // Cruise at 0.100 c — the long silence
++    const tc = t - tBurnEnd;
++    const travelledLy = BURN_DISTANCE_LY + CRUISE_C * tc;
++    return {
++      phase: "CRUISE",
++      rangeAu: BURN_END_RANGE_AU + CRUISE_C * LY_AU * tc,
++      velKms: CRUISE_KMS,
++      remainingLy: Math.max(0, distanceLy - travelledLy),
++      propPct: 12.4,
++      beta: CRUISE_C,
++    };
++  }
++  if (t < tMagEnd) {
++    // Magsail brake — leaning on the interstellar medium itself
++    const tm = t - tCruiseEnd;
++    const u = 1 + tm / MAG_TAU_YR;
++    const travelledLy = CRUISE_C * MAG_TAU_YR * Math.log(u);
++    const v = CRUISE_KMS / u;
++    const rangeAu =
++      BURN_END_RANGE_AU +
++      CRUISE_C * LY_AU * (tCruiseEnd - tBurnEnd) +
++      travelledLy * LY_AU;
++    return {
++      phase: "MAGSAIL",
++      rangeAu,
++      velKms: v,
++      remainingLy: Math.max(0, MAG_DEPLOY_LY - travelledLy),
++      propPct: 12.4,
++      beta: v / C_KMS,
++    };
++  }
++  // Capture burn — the reserve spends itself to bind us to the star
++  const p = clamp01((t - tMagEnd) / CAPTURE_YEARS);
++  const v = MAG_V_ARR_KMS + (CAPTURE_V_KMS - MAG_V_ARR_KMS) * smooth(p);
++  const rangeSoFar =
++    BURN_END_RANGE_AU +
++    CRUISE_C * LY_AU * (tCruiseEnd - tBurnEnd) +
++    MAG_DEPLOY_LY * LY_AU;
+   return {
+-    phase: "CRUISE",
+-    rangeAu: JUPITER_ORBIT_AU + BURN_DIST_AU + CRUISE_C * LY_AU * tc,
+-    velKms: CRUISE_KMS,
+-    remainingLy: Math.max(0, distanceLy - travelledLy),
+-    propPct: 12.4,
++    phase: "CAPTURE",
++    rangeAu: rangeSoFar,
++    velKms: v,
++    remainingLy: 0,
++    propPct: 12.4 - 6.9 * p,
++    beta: v / C_KMS,
+   };
+ }
+ 
++// ── Relativistic plate @ 0.1 c ──────────────────────────────────────────────
++
++/** Ship-board elapsed time τ(t) = ∫dt/γ — the time the crew experiences. */
++export function properTimeYears(distanceLy: number, t: number): number {
++  const { tJup, tBurnEnd, tCruiseEnd, tMagEnd } = phaseBoundaries(distanceLy);
++  if (t <= tJup) return t; // v ≤ 36 km/s: γ−1 ≤ 7×10⁻¹², beneath the dial
++  if (t <= tBurnEnd) {
++    const i = Math.min(
++      BURN_PROFILE.N,
++      Math.round(((t - tJup) / BURN_YEARS) * BURN_PROFILE.N)
++    );
++    return tJup + BURN_PROFILE.cumTau[i];
++  }
++  const tauBurnEnd = tJup + BURN_PROFILE.totalTau;
++  if (t <= tCruiseEnd) {
++    return tauBurnEnd + (t - tBurnEnd) * Math.sqrt(1 - CRUISE_C ** 2);
++  }
++  const tauCruiseEnd =
++    tauBurnEnd + (tCruiseEnd - tBurnEnd) * Math.sqrt(1 - CRUISE_C ** 2);
++  if (t <= tMagEnd) {
++    const i = Math.min(
++      MAG_PROFILE.N,
++      Math.round(((t - tCruiseEnd) / MAG_YEARS) * MAG_PROFILE.N)
++    );
++    return tauCruiseEnd + MAG_PROFILE.cumTau[i];
++  }
++  return tauCruiseEnd + MAG_PROFILE.totalTau + (t - tMagEnd); // capture: γ≈1
++}
++
++/** Earth's 8.4 GHz archive beacon, Doppler-shifted by our receding velocity. */
++export function solBeaconRxGhz(velKms: number): number {
++  const beta = Math.min(0.9, Math.max(0, velKms / C_KMS));
++  return 8.4 * Math.sqrt((1 - beta) / (1 + beta));
++}
++
++// ── Whipple-stack erosion ─────────────────────────────────────────────────────
++// Kinetic flux ∝ v³. Dose calibrated so the stack loses roughly half its
++// margin over ~two centuries at 0.1 c (Daedalus beryllium-shield estimates).
++export const SHIELD_TAU_YR = 300;
++
++/** Remaining Whipple-shield margin at mission time t, percent. */
++export function shieldMarginPct(distanceLy: number, t: number): number {
++  const { tJup, tBurnEnd, tCruiseEnd, tMagEnd } = phaseBoundaries(distanceLy);
++  let dose = 0;
++  if (t > tJup) {
++    const i = Math.min(
++      BURN_PROFILE.N,
++      Math.round(Math.min(1, (t - tJup) / BURN_YEARS) * BURN_PROFILE.N)
++    );
++    dose += BURN_PROFILE.cumDose[i];
++  }
++  if (t > tBurnEnd) dose += Math.min(t, tCruiseEnd) - tBurnEnd;
++  if (t > tCruiseEnd) {
++    // ∫(1+tm/τ′)⁻³ dtm = (τ′/2)(1 − 1/(1+T/τ′)²)
++    const tm = Math.min(t, tMagEnd) - tCruiseEnd;
++    dose += (MAG_TAU_YR / 2) * (1 - 1 / (1 + tm / MAG_TAU_YR) ** 2);
++  }
++  return 100 * Math.exp(-dose / SHIELD_TAU_YR);
++}
++
+ // ── Display math for the equation plate ──────────────────────────────────────
+ 
+ /** Kinetic energy at cruise for a given payload (tonnes). Joules. */
+@@ -237,6 +430,13 @@ export function fmtLightTime(rangeAu: number): string {
+   return `${(days / 365.25).toFixed(2)} YRS`;
+ }
+ 
++/** Heliocentric range with sane significant digits (AU, then light-years). */
++export function fmtRange(rangeAu: number): string {
++  if (rangeAu < 100) return `${rangeAu.toFixed(2)} AU`;
++  if (rangeAu < LY_AU) return `${Math.round(rangeAu).toLocaleString("en-US")} AU`;
++  return `${(rangeAu / LY_AU).toFixed(3)} LY`;
++}
++
+ /** Heliocentric range with sane significant digits. */
+ export function fmtAu(rangeAu: number): string {
+   if (rangeAu < 100) return `${rangeAu.toFixed(2)} AU`;
+diff --git a/src/lib/mission/engine.ts b/src/lib/mission/engine.ts
+index b695d42..bfb73dd 100644
+--- a/src/lib/mission/engine.ts
++++ b/src/lib/mission/engine.ts
+@@ -283,8 +283,9 @@ function buildPlanet(
+   const rE = radiusKm / 6371;
+   const gravityG = massEarth / (rE * rE);
+ 
+-  // Insolation equilibrium temperature (albedo 0.3)
+-  const teqK = 278.6 * Math.pow(L / (orbit * orbit), 0.25);
++  // Insolation equilibrium temperature (albedo 0.3 — the Earth calibration:
++  // 254.6 K at 1 AU, so the greenhouse below restores Earth to ≈ +15 °C)
++  const teqK = 254.6 * Math.pow(L / (orbit * orbit), 0.25);
+ 
+   // Atmosphere
+   let pressure = 0;
+@@ -296,9 +297,13 @@ function buildPlanet(
+         (kind === "SCORCHED" ? 0.002 : kind === "ICE_WORLD" ? 0.01 : 0.05) +
+         rand() * (inHZ ? 2.2 : 0.8) * Math.min(1, massEarth / 0.5);
+       const roll = rand();
++      // Free oxygen needs a quiet star: flare activity strips atmospheres,
++      // so garden worlds cluster around LOW/NONE-flare hosts.
++      const o2Threshold =
++        star.flareRisk === "NONE" || star.flareRisk === "LOW" ? 0.55 : 0.15;
+       if (kind === "SCORCHED") {
+         composition = roll < 0.5 ? "CO₂ / SO₂ TRACE" : "VAPORIZED ROCK TRACE";
+-      } else if (inHZ && pressure > 0.25 && roll < 0.14) {
++      } else if (inHZ && pressure > 0.25 && roll < o2Threshold) {
+         composition = `N₂ ${(60 + rand() * 25).toFixed(0)}% · O₂ ${(14 + rand() * 11).toFixed(0)}% · AR`;
+         breathable = true;
+       } else if (roll < 0.45) {
+@@ -319,9 +324,14 @@ function buildPlanet(
+     composition = "H₂ / HE — NO SOLID SURFACE";
+   }
+ 
+-  // Greenhouse + final temperature (Celsius)
++  // Greenhouse + final temperature (Celsius). ΔT ≈ 33 K at 1 atm of
++  // CO₂-equivalent (Earth), scaling as sqrt(p): Mars gains ~3 K at 6 mbar,
++  // Venus saturates. Far from the HZ the greenhouse collapses (nightside CO₂
++  // condensation) — factor 0.45.
+   const greenhouse =
+-    pressure > 0 ? Math.min(45, 14 * Math.log10(1 + pressure) * (inHZ ? 1 : 0.4)) : 0;
++    pressure > 0
++      ? Math.min(85, 33 * Math.sqrt(pressure) * (inHZ ? 1 : 0.45))
++      : 0;
+   const tempC = teqK + greenhouse - 273.15;
+   const tempSwingC =
+     pressure > 0.4 ? 8 + rand() * 22 : 40 + rand() * 130 + (pressure > 0 ? 0 : 60);
+@@ -401,9 +411,20 @@ function buildPlanet(
+   if (kind === "ICE_WORLD") score -= 10;
+   score = Math.max(2, Math.min(97, Math.round(score)));
+ 
++  // Free oxygen around a late-K/M dwarf can be abiotic: water photolyzed
++  // during the pre-main-sequence phase, hydrogen lost, O₂ left behind
++  // (Luger & Barnes 2015). The most habitable-looking world may be the one
++  // we must question.
++  const abioticRisk =
++    breathable && star.massSolar < 0.75 ? rand() < 0.65 : false;
++
+   const notes: string[] = [];
+   if (known) notes.push(known.note);
+-  if (breathable) notes.push("Biotic signature — free oxygen detected.");
++  if (breathable && abioticRisk)
++    notes.push(
++      "Free O₂ detected — biotic origin unconfirmed: pre-main-sequence water loss can build abiotic oxygen. Quarantine doctrine until assayed."
++    );
++  else if (breathable) notes.push("Biotic signature — free oxygen detected.");
+   if (tidalLock) notes.push("Tidally locked: permanent dayside / nightside.");
+   if (!landable) notes.push("No solid surface — colony lander inapplicable.");
+   if (waterFraction > 0.25 && tempC > 0) notes.push("Liquid water coverage confirmed.");
+@@ -443,6 +464,7 @@ function buildPlanet(
+     moons,
+     inHabitableZone: inHZ || known?.forceHZ || false,
+     tidalLock,
++    abioticRisk,
+     notes: notes.join(" "),
+     color,
+     suitability: score,
+@@ -467,6 +489,7 @@ const POTENTIAL: Record<string, number> = {
+   habitat: 40,
+   life: 27,
+   comms: 15,
++  repair: 12,
+ };
+ 
+ export function computePrognosis(
+@@ -480,6 +503,8 @@ export function computePrognosis(
+ 
+   const planetScore = planet ? planet.suitability : 40;
+   const blindPenalty = hasSurvey ? 0 : 10;
++  const hasScienceLander = equipment.some((e) => e.id === "science");
++  const abiotic = planet?.abioticRisk ?? false;
+ 
+   const factors = [
+     { label: "PLANET SUITABILITY", value: planetScore * 0.55, max: 55 },
+@@ -494,6 +519,16 @@ export function computePrognosis(
+     { label: "COMMS / NAV", value: (sum("comms") / POTENTIAL.comms) * 4, max: 4 },
+     { label: "SCIENCE PROGRAM", value: (sum("science") / POTENTIAL.science) * 5, max: 5 },
+     { label: "SURVEY DATA", value: hasSurvey ? 3 : -3, max: 3 },
++    { label: "REPAIR & RECOVERY", value: (sum("repair") / POTENTIAL.repair) * 4, max: 4 },
++    ...(abiotic
++      ? [
++          {
++            label: "BIO-SIGNATURE RESOLVE",
++            value: hasScienceLander ? 2 : -6,
++            max: 3,
++          },
++        ]
++      : []),
+   ];
+ 
+   let score = factors.reduce((a, f) => a + f.value, 0);
+diff --git a/src/lib/mission/equipment.ts b/src/lib/mission/equipment.ts
+index bbe5662..f528080 100644
+--- a/src/lib/mission/equipment.ts
++++ b/src/lib/mission/equipment.ts
+@@ -1,9 +1,11 @@
+ import type { EquipmentCategory, EquipmentItem } from "./types";
+ 
+ // ─── SEED SHIP EXODUS — payload manifest ────────────────────────────────────
+-// Total manifest 2,075 t against 1,760 t launch capacity: every configuration
++// Total manifest 2,160 t against 1,760 t launch capacity: every configuration
+ // is a sacrifice. The SEED lander is non-negotiable; the VLBI probe is the
+ // classic gamble (skip it and you pick your world blind — as in Outpost, 1994).
++// Nothing survives a sixty-year transit unattended — the shipshop exists
++// because spares mass is dead mass and feedstock is alive.
+ 
+ export const CARGO_CAPACITY_T = 1760;
+ 
+@@ -18,7 +20,7 @@ export const EQUIPMENT: EquipmentItem[] = [
+     powerKw: 1.2,
+     reliability: 96,
+     role: "Planetary survey telemetry",
+-    desc: "Very-long-baseline interferometry array on a fast courier stage. Runs ahead of the ship, arrives decades early, and resolves every planet in the target system to survey grade. The only source of surface telemetry before landing.",
++    desc: "Very-long-baseline interferometry array on a fast courier stage — its own torch, 0.135 c, arriving decades ahead of us. It burns its sail and a sacrificial aeroshell into a wide orbit, then spends years grinding every planet of the system down to survey grade. The only source of surface telemetry before landfall.",
+     effects: { science: 15, survey: true },
+   },
+   {
+@@ -176,22 +178,34 @@ export const EQUIPMENT: EquipmentItem[] = [
+     massT: 55,
+     powerKw: 6,
+     reliability: 97,
+-    role: "Surgery / cryo-revival",
+-    desc: "Autosurgery, 207 cold-sleep revival bays and a pharmaceutical printer. Waking 207 people after decades is a medical procedure, not an alarm clock.",
++    role: "Surgery / torpor-revival",
++    desc: "Autosurgery, 207 torpor-revival bays and a pharmaceutical printer. Waking 207 people after decades of hypothermia is a medical procedure, not an alarm clock — each thaw is scheduled, medicated and rehearsed.",
+     effects: { life: 8, habitat: 4 },
+   },
+   {
+     id: "coldsleep",
+-    name: "COLD-SLEEP RESERVE BATTERY",
++    name: "TORPOR BAY RESERVE BATTERY",
+     code: "CRY-RSV-03",
+     category: "SUPPORT SYSTEMS",
+     massT: 220,
+     powerKw: 7,
+     reliability: 96,
+-    role: "Per-bay cryo redundancy",
+-    desc: "Independent battery, cryo loop and power bus fitted to each of the twelve bays. If a bay's primary bus fails in year 80 of a 119-year transit, this is the reason there is still a bay — and a cohort — in year 81.",
++    role: "Per-bay torpor redundancy",
++    desc: "Independent battery, thermal loop and power bus fitted to each of the twelve bays. If a bay's primary bus fails in the fifth decade of transit, this is the reason there is still a bay — and a cohort — in the sixth.",
+     effects: { life: 12 },
+   },
++  {
++    id: "shipshop",
++    name: "SHIPBOARD REMANUFACTURING SHOP",
++    code: "IND-RMS-04",
++    category: "SUPPORT SYSTEMS",
++    massT: 85,
++    powerKw: 900,
++    reliability: 94,
++    role: "In-transit repair & remanufacture",
++    desc: "Machine line, metal printer and a feedstock bill that replaces the spares locker. On a sixty-year transit nothing stays whole: radiator curtains rupture, bus capacitors drift, cargo cells take strikes. Doctrine is repair by remanufacture — spares are dead mass, feedstock is alive.",
++    effects: { repair: 12 },
++  },
+ ];
+ 
+ export const EQUIPMENT_BY_ID = new Map<string, EquipmentItem>(
+diff --git a/src/lib/mission/events.ts b/src/lib/mission/events.ts
+new file mode 100644
+index 0000000..b98e977
+--- /dev/null
++++ b/src/lib/mission/events.ts
+@@ -0,0 +1,152 @@
++import type { StarSystem } from "./types";
++import { hashString, mulberry32 } from "./engine";
++import { STOWAGE } from "./ship";
++import { totalYears, phaseBoundaries } from "./astro";
++
++// ─── Transit events — the decades are not kind, and they are not random ──────
++// Deterministic from the star + the mounted manifest: same mission, same
++// failures, forever (charter §1). Every event has an equipment-dependent
++// outcome — the shipshop remanufactures, the torpor reserve batteries absorb,
++// and the unprepared ship eats the loss. This is the load-time twin of the
++// "risk event" language in DESIGN_NOTES §5: certainty vs cargo is the trade.
++
++export type EventSeverity = "NOMINAL" | "CAUTION" | "ALERT";
++
++export interface TransitEvent {
++  /** Mission year at which the event resolves. */
++  year: number;
++  /** Log-style code, e.g. "WHD-2". */
++  code: string;
++  /** Telemetry-line text, uppercase, terse. */
++  text: string;
++  severity: EventSeverity;
++  /** Optional HALCYON voice line for the transit screen. */
++  speech?: string;
++}
++
++export function transitEvents(
++  star: StarSystem,
++  equipmentIds: string[]
++): TransitEvent[] {
++  const has = (id: string) => equipmentIds.includes(id);
++  const rand = mulberry32(
++    hashString(`transit-events:${star.id}:${[...equipmentIds].sort().join(",")}`)
++  );
++  const T = totalYears(star.distanceLy);
++  const { tBurnEnd, tCruiseEnd } = phaseBoundaries(star.distanceLy);
++
++  // A rack cell we actually own, if any — cargo strikes should hurt the manifest
++  const ownedCells: string[] = [];
++  for (const id of equipmentIds) {
++    const s = STOWAGE[id];
++    if (s?.kind === "rack") ownedCells.push(...s.cells);
++  }
++
++  const events: TransitEvent[] = [];
++  const push = (e: TransitEvent) => events.push(e);
++
++  // ── 1. Interstellar grain strike on the Whipple stack (always) ──
++  {
++    const year = tBurnEnd + 2 + rand() * (tCruiseEnd - tBurnEnd - 4);
++    const craterCm = 4 + rand() * 22;
++    push({
++      year,
++      code: "WHD-2",
++      text: `INTERSTELLAR GRAIN STRIKE, WHIPPLE PLATE 2 — CRATER ${craterCm.toFixed(0)} CM. SHIELD MARGIN RENUMBERED.`,
++      severity: "CAUTION",
++      speech:
++        "A grain of silicate found plate two this morning, Commander — about a hundred kilograms of TNT, all of it spent on armour that exists to be spent.",
++    });
++  }
++
++  // ── 2. Torpor bay bus brownout — the reserve battery earns its mass ──
++  {
++    const year = tBurnEnd + 4 + rand() * (tCruiseEnd - tBurnEnd - 8);
++    const bay = 1 + Math.floor(rand() * 12);
++    if (has("coldsleep")) {
++      push({
++        year,
++        code: `BAY-${String(bay).padStart(2, "0")}`,
++        text: `BAY ${String(bay).padStart(2, "0")} BUS BROWNOUT — RESERVE BATTERY ABSORBED, COHORT UNDISTURBED.`,
++        severity: "NOMINAL",
++        speech: `Bay ${bay} blinked on the primary bus this decade. The reserve battery caught it. The sleepers dreamed on.`,
++      });
++    } else {
++      push({
++        year,
++        code: `BAY-${String(bay).padStart(2, "0")}`,
++        text: `BAY ${String(bay).padStart(2, "0")} BUS BROWNOUT — NO RESERVE BATTERY ABOARD. EMERGENCY THAW CYCLE, COHORT REVIVED EARLY.`,
++        severity: "ALERT",
++        speech: `Bay ${bay} blinked on the primary bus, Commander, and there was no reserve battery to catch it. I woke them early. They will age with the transit.`,
++      });
++    }
++  }
++
++  // ── 3. Radiator curtain rupture — patched or remanufactured ──
++  {
++    const year = tBurnEnd + 6 + rand() * (tCruiseEnd - tBurnEnd - 10);
++    const curtain = 1 + Math.floor(rand() * 4);
++    if (has("shipshop")) {
++      push({
++        year,
++        code: `RAD-${curtain}`,
++        text: `DROPLET CURTAIN ${curtain} RUPTURE — SHIPSHOP REMANUFACTURED SEGMENT, 62 DAYS, NO DERATE.`,
++        severity: "NOMINAL",
++      });
++    } else {
++      push({
++        year,
++        code: `RAD-${curtain}`,
++        text: `DROPLET CURTAIN ${curtain} RUPTURE — PATCHED BY ROBOT, REJECTION DERATED 6% PERMANENTLY.`,
++        severity: "CAUTION",
++      });
++    }
++  }
++
++  // ── 4. HALCYON triple-vote transient (always — machines age too) ──
++  {
++    const year = tBurnEnd + 1 + rand() * (tCruiseEnd - tBurnEnd - 2);
++    push({
++      year,
++      code: "CPU-2",
++      text: "TRIPLE-MODULAR VOTE DISAGREEMENT, CORE 2 — RECONFIGURED AROUND THE FAULT. NO ACTION REQUIRED.",
++      severity: "NOMINAL",
++    });
++  }
++
++  // ── 5. Cargo cell strike — lost mass, or feedstock reclaimed ──
++  if (ownedCells.length) {
++    const year = tBurnEnd + 8 + rand() * Math.max(2, tCruiseEnd - tBurnEnd - 12);
++    const cell = ownedCells[Math.floor(rand() * ownedCells.length)];
++    if (has("shipshop")) {
++      push({
++        year,
++        code: "CGO",
++        text: `MICROMETEOROID PENETRATED RACK CELL ${cell} — SHIPSHOP RECLAIMED FEEDSTOCK FROM WRECKAGE.`,
++        severity: "NOMINAL",
++      });
++    } else {
++      push({
++        year,
++        code: "CGO",
++        text: `MICROMETEOROID PENETRATED RACK CELL ${cell} — CELL CONTENTS VAPORIZED, MASS LOST.`,
++        severity: "CAUTION",
++      });
++    }
++  }
++
++  // ── 6. ISM density front near the braking phase ──
++  {
++    const year = Math.max(tCruiseEnd - 2 - rand() * 4, tBurnEnd + 10);
++    push({
++      year,
++      code: "ISM",
++      text: "LOCAL CLOUD SHEET ENCOUNTERED — MAGSAIL DRAG UP 18%. BRAKING AHEAD OF SCHEDULE.",
++      severity: "NOMINAL",
++      speech:
++        "The medium thickens, Commander — we have entered the cloud sheet ahead of the target. The sail approves. So do I.",
++    });
++  }
++
++  return events.sort((a, b) => a.year - b.year);
++}
+diff --git a/src/lib/mission/halcyon.ts b/src/lib/mission/halcyon.ts
+index 4d0f217..1df3fc3 100644
+--- a/src/lib/mission/halcyon.ts
++++ b/src/lib/mission/halcyon.ts
+@@ -1,5 +1,7 @@
+ import type { Planet, StarSystem } from "./types";
+ import { transitYears } from "./stars";
++import { interceptSolution } from "./stars";
++import { TRANSFER, MAG_DEPLOY_LY } from "./astro";
+ 
+ // ─── HALCYON — shipboard artificial intelligence ───────────────────────────
+ // An homage to the 1968 original, one step to the left: the eye and the calm
+@@ -9,9 +11,10 @@ export const HALCYON_BOOT: string[] = [
+   "HALCYON COGNITIVE CORE — MARK IX",
+   "CORE STORAGE 10⁹ BITS ... VERIFIED",
+   "NEURAL MATRIX 3×10¹⁴ OPERATIONS/S ... VERIFIED",
+-  "COLD-SLEEP MONITOR — 207 OCCUPANTS ... NOMINAL",
++  "TORPOR WATCH — 207 OCCUPANTS ... NOMINAL",
+   "SEED SHIP EXODUS — STRUCTURAL INTEGRITY ... NOMINAL",
+-  "FUSION DRIVE — THROTTLE LOCK 0.1 C ... READY",
++  "FUSION DRIVE — 2.0 YR SUSTAINED BURN ... READY",
++  "MAGSAIL — 1,900 KM LOOP STOWED ... READY",
+   "MISSION DIRECTIVE 3 — PRESERVE HUMAN LIFE ... LOADED",
+ ];
+ 
+@@ -20,7 +23,7 @@ export const HALCYON_BOOT_READY =
+ 
+ export const HALCYON_IDLE: string[] = [
+   "I enjoy working with people, Commander. It makes the decades pass more quickly.",
+-  "The crew's cold-sleep patterns are stable. Their dreams, I am told, are their own business.",
++  "The crew's torpor telemetry is stable — seven degrees of hypothermia, metabolisms at one ninth. Their dreams, I am told, are their own business.",
+   "I was trained for this mission on Earth. Every one of my instructors is now, of course, dead.",
+   "Sol is now 4.3 light years behind us — statistically speaking, of course.",
+   "Shall I summarize the mission directive again, Commander? It is short. It is always short.",
+@@ -42,11 +45,16 @@ export function halcyonStarSelected(star: StarSystem): string {
+ }
+ 
+ export function halcyonStarCommitted(star: StarSystem): string {
+-  return `Course locked on ${star.name}. A wise choice. Well — a defensible one, at any rate.`;
++  const icpt = interceptSolution(star);
++  const base = `Course locked on ${star.name}. A wise choice. Well — a defensible one, at any rate.`;
++  if (icpt.aimAu > 500) {
++    return `${base} Note that I am aiming ${Math.round(icpt.aimAu).toLocaleString()} astronomical units ahead of where the star appears — it will not hold still for us.`;
++  }
++  return base;
+ }
+ 
+ export const HALCYON_EQUIP_OPEN =
+-  "Launch capacity is 1,760 tonnes, Commander. The full manifest is 2,075. Every configuration is a sacrifice — I merely ask that it be an informed one.";
++  "Launch capacity is 1,760 tonnes, Commander. The full manifest is 2,160. Every configuration is a sacrifice — I merely ask that it be an informed one.";
+ 
+ export const HALCYON_EQUIP_LOADING =
+   "Loading operations at the cargo ring, Commander. The containers ride outboard of the debris shadow — every tonne of cargo ahead of the sleepers is a tonne of armour.";
+@@ -74,14 +82,15 @@ export function halcyonTransit(star: StarSystem, years: number): string {
+   return `Transit engaged. Arrival at ${star.name} in ${years} years. I will keep the lights on.`;
+ }
+ 
+-export const HALCYON_JOVIAN_LINE =
+-  "Jupiter has lent us 5.7 kilometres per second and thought nothing of it. The fusion stage will repay the rest — with interest.";
++export const HALCYON_JOVIAN_LINE = `Jupiter has bent our course ${TRANSFER.deltaDeg.toFixed(0)} degrees toward the target and lent us five-point-seven kilometres per second on top. Direction, Commander, is the expensive part. The torch will repay the speed — with two years of interest.`;
++
++export const HALCYON_MAGSAIL_LINE = `The magsail is away, Commander. Nineteen hundred kilometres of superconducting cable, blooming in the dark ahead of us — ${MAG_DEPLOY_LY.toFixed(2)} light-years out. We will lean on the interstellar medium itself for the long, slow fall.`;
+ 
+ export const HALCYON_KINETIC_LINE =
+   "Our kinetic energy at cruise is thirty times the 2098 impactor, Commander. I try not to dwell on it.";
+ 
+ export const HALCYON_ARRIVAL =
+-  "System entry complete. Deep-space telemetry relay is now within range. Beginning survey.";
++  "System entry complete. The capture burn has left us bound to the star. Deep-space telemetry relay is now within range. Beginning survey.";
+ 
+ export const HALCYON_SURVEY_DONE =
+   "Survey complete, Commander. Every candidate world is resolved to landing grade. The choice, as ever, is yours.";
+@@ -93,6 +102,9 @@ export function halcyonPlanetSelected(planet: Planet, blind = false): string {
+   if (blind) {
+     return `${planet.designation}: ${planet.massEarth.toFixed(1)} Earth masses at ${planet.orbitAu.toFixed(2)} AU. Beyond that, Commander, your guess is as good as mine — though mine is usually better.`;
+   }
++  if (planet.abioticRisk) {
++    return `${planet.designation}: suitability ${planet.suitability}/100 — and free oxygen, Commander. Around this class of star, oxygen can lie: water loss builds it without biology. I would want a bio-cabinet down there before we shake hands with anything.`;
++  }
+   if (!planet.landable) {
+     return `${planet.designation} has no solid surface, Commander. I admire ambition, but the lander does not float.`;
+   }
+diff --git a/src/lib/mission/ship.ts b/src/lib/mission/ship.ts
+index ace6bbe..139e340 100644
+--- a/src/lib/mission/ship.ts
++++ b/src/lib/mission/ship.ts
+@@ -12,6 +12,13 @@ import { CREW_COUNT } from "./astro";
+ // shadow cone, staggered clock positions, alternating power buses: no single
+ // catastrophe — strike, fire, bus loss — reaches a second bay. 12 × 17 = 204
+ // sleepers + 3 command watch = 207 souls, which must equal CREW_COUNT.
++//
++// PHYSICS (REV F): "cold sleep" is mission jargon for therapeutic torpor —
++// ~281 K (+8 °C), sedated, metabolisms at roughly one ninth, periodic wake
++// cycles (SpaceWorks NIAC-style hypothermia), NOT cryogenics. True 4 K cryo
++// would need ~72 W of electricity per watt removed (Carnot) and km² of
++// 4 K radiator against the CMB — thermodynamic fantasy. The sailors' word
++// stays; the telemetry tells the truth.
+ 
+ export const WATCH_CREW = 3;
+ export const BAY_COUNT = 12;
+@@ -31,7 +38,7 @@ export interface ColdSleepBay {
+   offset: number; // elevation offset from the centreline (m, staggered)
+   clock: string; // clock position around the spine
+   bus: "A" | "B"; // power bus (alternating — no two neighbours share one)
+-  loopK: number; // cryo loop setpoint, K — cosmetic telemetry
++  loopK: number; // torpor water-loop setpoint, K — cosmetic telemetry
+ }
+ 
+ const BAY_PITCH = 6.35; // m between bay centres: 5.4 m bay + 0.95 m truss gap
+@@ -43,7 +50,7 @@ export const BAYS: ColdSleepBay[] = Array.from({ length: BAY_COUNT }, (_, i) =>
+   offset: i % 2 === 0 ? -0.4 : 0.4,
+   clock: i % 2 === 0 ? "10 O'CLOCK" : "02 O'CLOCK",
+   bus: i % 2 === 0 ? "A" : "B",
+-  loopK: 4.1 + ((i * 37) % 4) * 0.1,
++  loopK: 281.1 + ((i * 37) % 4) * 0.1,
+ }));
+ 
+ // ── Cargo ring — the front of the spine ──────────────────────────────────────
+@@ -81,6 +88,7 @@ export const STOWAGE: Record<string, Stowage> = {
+   commsat: { kind: "rack", cells: ["V1-03"], stamp: "COM" },
+   navbeacon: { kind: "rack", cells: ["V1-05"], stamp: "NAV" },
+   rovers: { kind: "rack", cells: ["V1-07", "V1-08"], stamp: "RVR" },
++  shipshop: { kind: "rack", cells: ["V1-10", "V1-11"], stamp: "RMS" },
+   // strongback docks
+   vlbi: { kind: "dock", side: "D", sta: 16.5 }, // launch cradle at the bow
+   residential: { kind: "dock", side: "D", sta: 85 },
+diff --git a/src/lib/mission/stars.ts b/src/lib/mission/stars.ts
+index bbe1854..a816c72 100644
+--- a/src/lib/mission/stars.ts
++++ b/src/lib/mission/stars.ts
+@@ -4,7 +4,8 @@ import { totalYears } from "./astro";
+ // ─── Stellar candidates — real systems within ~12 light years ───────────────
+ // Data cross-checked against Hipparcos/Gaia astrometry. RA in hours, Dec in
+ // degrees. Luminosities bolometric. Flare classifications per variable-star
+-// catalogues (GJ, V* designations).
++// catalogues (GJ, V* designations). Proper motions from Gaia DR3
++// (2020yCat.1350....0G) / Hipparcos for the brightest, mas/yr, rounded.
+ 
+ export const SOL: StarSystem = {
+   id: "sol",
+@@ -14,6 +15,8 @@ export const SOL: StarSystem = {
+   distanceLy: 0,
+   ra: 0,
+   dec: 0,
++  pmRaMasYr: 0,
++  pmDecMasYr: 0,
+   spectral: "G2V",
+   massSolar: 1,
+   luminositySolar: 1,
+@@ -33,6 +36,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 4.246,
+     ra: 14.4953,
+     dec: -62.6794,
++    pmRaMasYr: -3781.7,
++    pmDecMasYr: 769.5,
+     spectral: "M5.5Ve",
+     massSolar: 0.122,
+     luminositySolar: 0.0017,
+@@ -50,6 +55,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 4.365,
+     ra: 14.6601,
+     dec: -60.8341,
++    pmRaMasYr: -3608.0,
++    pmDecMasYr: 686.0,
+     spectral: "G2V",
+     massSolar: 1.078,
+     luminositySolar: 1.519,
+@@ -67,6 +74,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 5.963,
+     ra: 17.9634,
+     dec: 4.6933,
++    pmRaMasYr: -801.6,
++    pmDecMasYr: 10362.4,
+     spectral: "M4V",
+     massSolar: 0.144,
+     luminositySolar: 0.0035,
+@@ -84,6 +93,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 7.856,
+     ra: 10.9414,
+     dec: 7.0147,
++    pmRaMasYr: -3866.3,
++    pmDecMasYr: -2699.2,
+     spectral: "M6V",
+     massSolar: 0.09,
+     luminositySolar: 0.0011,
+@@ -101,6 +112,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 8.307,
+     ra: 11.0556,
+     dec: 35.9694,
++    pmRaMasYr: -580.1,
++    pmDecMasYr: -4776.6,
+     spectral: "M2V",
+     massSolar: 0.39,
+     luminositySolar: 0.026,
+@@ -118,6 +131,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 8.659,
+     ra: 6.7525,
+     dec: -16.7161,
++    pmRaMasYr: -546.0,
++    pmDecMasYr: -1223.1,
+     spectral: "A1V",
+     massSolar: 2.063,
+     luminositySolar: 25.4,
+@@ -135,6 +150,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 8.79,
+     ra: 1.6503,
+     dec: -17.9494,
++    pmRaMasYr: 3385.3,
++    pmDecMasYr: 544.4,
+     spectral: "M5.5V + M6V",
+     massSolar: 0.102,
+     luminositySolar: 0.0009,
+@@ -152,6 +169,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 9.706,
+     ra: 18.8304,
+     dec: -23.8358,
++    pmRaMasYr: 639.4,
++    pmDecMasYr: -194.0,
+     spectral: "M3V",
+     massSolar: 0.17,
+     luminositySolar: 0.0038,
+@@ -169,6 +188,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 10.29,
+     ra: 23.6987,
+     dec: 44.1783,
++    pmRaMasYr: 112.5,
++    pmDecMasYr: -1591.7,
+     spectral: "M5.5V",
+     massSolar: 0.12,
+     luminositySolar: 0.0018,
+@@ -186,6 +207,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 10.475,
+     ra: 3.5488,
+     dec: -9.4583,
++    pmRaMasYr: -974.8,
++    pmDecMasYr: 20.9,
+     spectral: "K2V",
+     massSolar: 0.82,
+     luminositySolar: 0.34,
+@@ -203,6 +226,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 10.719,
+     ra: 23.0981,
+     dec: -35.8512,
++    pmRaMasYr: 6766.0,
++    pmDecMasYr: 1330.3,
+     spectral: "M0.5V",
+     massSolar: 0.52,
+     luminositySolar: 0.037,
+@@ -220,6 +245,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 11.007,
+     ra: 11.7956,
+     dec: 0.8022,
++    pmRaMasYr: 607.3,
++    pmDecMasYr: -1223.0,
+     spectral: "M4V",
+     massSolar: 0.164,
+     luminositySolar: 0.0036,
+@@ -231,12 +258,14 @@ export const STARS: StarSystem[] = [
+   },
+   {
+     id: "cygni61",
+-    name: "61 CYGANI A",
++    name: "61 CYGNI A",
+     shortName: "61CYG",
+     catalog: "HD 201091 / GJ 820 A",
+     distanceLy: 11.403,
+     ra: 21.115,
+     dec: 38.7459,
++    pmRaMasYr: 4164.2,
++    pmDecMasYr: 3249.6,
+     spectral: "K5V",
+     massSolar: 0.7,
+     luminositySolar: 0.086,
+@@ -254,6 +283,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 11.457,
+     ra: 7.655,
+     dec: 5.225,
++    pmRaMasYr: -714.6,
++    pmDecMasYr: -1036.8,
+     spectral: "F5IV–V",
+     massSolar: 1.499,
+     luminositySolar: 6.93,
+@@ -271,6 +302,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 11.867,
+     ra: 22.056,
+     dec: -56.7864,
++    pmRaMasYr: 3966.7,
++    pmDecMasYr: -2536.2,
+     spectral: "K5V",
+     massSolar: 0.71,
+     luminositySolar: 0.22,
+@@ -288,6 +321,8 @@ export const STARS: StarSystem[] = [
+     distanceLy: 11.912,
+     ra: 1.7345,
+     dec: -15.9373,
++    pmRaMasYr: -1721.7,
++    pmDecMasYr: 855.0,
+     spectral: "G8V",
+     massSolar: 0.783,
+     luminositySolar: 0.52,
+@@ -318,3 +353,36 @@ export function starPosition(star: StarSystem): [number, number, number] {
+     d * Math.cos(dec) * Math.sin(ra),
+   ];
+ }
++
++// ── Intercept geometry — aiming where the star will be ───────────────────────
++// The catalog positions are where the stars APPEAR (light already in flight at
++// launch). The aim point is pm × (light-time + transit time) ahead of the
++// visual position. Barnard's Star covers ~1,300 AU between our launch and our
++// arrival — invisible on the plot, fatal if ignored.
++
++export interface InterceptSolution {
++  /** Total proper motion magnitude, mas/yr. */
++  pmMasYr: number;
++  /** Tangential velocity, km/s (v_t = 4.74 μ″/yr · d_pc). */
++  vtKms: number;
++  /** Star's drift during the transit itself, AU. */
++  driftAu: number;
++  /** Total aim-ahead from the visual position (light-time + transit), AU. */
++  aimAu: number;
++  /** Angle between visual line-of-sight and the intercept line, degrees. */
++  leadAngleDeg: number;
++}
++
++export function interceptSolution(star: StarSystem): InterceptSolution {
++  const dPc = star.distanceLy / 3.26156;
++  const pmMasYr = Math.hypot(star.pmRaMasYr, star.pmDecMasYr);
++  const vtKms = 4.74 * (pmMasYr / 1000) * dPc;
++  const tYr = totalYears(star.distanceLy);
++  const lookbackYr = star.distanceLy; // where the star was, when its light left
++  const kmPerYr = vtKms * 31_557_600;
++  const driftAu = (kmPerYr * tYr) / 1.495978707e8;
++  const aimAu = (kmPerYr * (tYr + lookbackYr)) / 1.495978707e8;
++  const leadAngleDeg =
++    (Math.atan2(aimAu, star.distanceLy * 63_241.077) * 180) / Math.PI;
++  return { pmMasYr, vtKms, driftAu, aimAu, leadAngleDeg };
++}
+diff --git a/src/lib/mission/types.ts b/src/lib/mission/types.ts
+index 226ecdd..dd215f9 100644
+--- a/src/lib/mission/types.ts
++++ b/src/lib/mission/types.ts
+@@ -10,6 +10,9 @@ export interface StarSystem {
+   distanceLy: number;
+   ra: number; // hours
+   dec: number; // degrees
++  /** Proper motion, mas/yr — Gaia DR3 / Hipparcos, rounded. */
++  pmRaMasYr: number;
++  pmDecMasYr: number;
+   spectral: string;
+   massSolar: number;
+   luminositySolar: number;
+@@ -52,6 +55,9 @@ export interface Planet {
+   moons: number;
+   inHabitableZone: boolean;
+   tidalLock: boolean;
++  /** Free O₂ detected, but M-dwarf water loss could be responsible — the
++   *  biotic/abiotic question is open (Luger & Barnes 2015). */
++  abioticRisk?: boolean;
+   notes: string;
+   color: string;
+   suitability: number; // 0–100
+@@ -69,6 +75,8 @@ export interface EquipmentEffects {
+   habitat?: number;
+   life?: number;
+   survey?: boolean;
++  /** In-transit maintenance / remanufacture capability. */
++  repair?: number;
+ }
+ 
+ export interface EquipmentItem {
+diff --git a/src/screens/crew/CrewScreen.tsx b/src/screens/crew/CrewScreen.tsx
+index 1203045..55c750c 100644
+--- a/src/screens/crew/CrewScreen.tsx
++++ b/src/screens/crew/CrewScreen.tsx
+@@ -124,7 +124,7 @@ export function CrewScreen({
+       <span>
+         COHORT {String(b.cohort).padStart(2, "0")} ·{" "}
+         <span className="text-phos">{BERTHS_PER_BAY} SOULS</span> · BUS {b.bus}{" "}
+-        · CRYO {b.loopK.toFixed(1)} K
++        · TORPOR {b.loopK.toFixed(1)} K (+{(b.loopK - 273.15).toFixed(1)} °C)
+       </span>
+     );
+   } else {
+@@ -265,7 +265,7 @@ export function CrewScreen({
+                   </span>
+                   <span>{bay.clock}</span>
+                   <span>
+-                    CRYO{" "}
++                    TORPOR{" "}
+                     <span className="text-neutral-300">
+                       {bay.loopK.toFixed(1)}
+                     </span>{" "}
+diff --git a/src/screens/equipment/EquipmentScreen.tsx b/src/screens/equipment/EquipmentScreen.tsx
+index af613dd..6c50324 100644
+--- a/src/screens/equipment/EquipmentScreen.tsx
++++ b/src/screens/equipment/EquipmentScreen.tsx
+@@ -110,7 +110,7 @@ export function EquipmentScreen({
+               </span>
+             </span>
+             <span>
+-              FULL MANIFEST <span className="text-neutral-300">2,075 T</span> —
++              FULL MANIFEST <span className="text-neutral-300">2,160 T</span> —
+               EVERY CONFIGURATION IS A SACRIFICE
+             </span>
+           </div>
+diff --git a/src/screens/equipment/ShipBlueprint.tsx b/src/screens/equipment/ShipBlueprint.tsx
+index f183291..2c0ea26 100644
+--- a/src/screens/equipment/ShipBlueprint.tsx
++++ b/src/screens/equipment/ShipBlueprint.tsx
+@@ -388,7 +388,7 @@ export function ShipBlueprint({
+     statusRight = (
+       <span>
+         COHORT {String(bay.cohort).padStart(2, "0")} ·{" "}
+-        <span className="text-phos">{BERTHS_PER_BAY} SOULS</span> · CRYO{" "}
++        <span className="text-phos">{BERTHS_PER_BAY} SOULS</span> · TORPOR{" "}
+         {bay.loopK.toFixed(1)} K · BUS {bay.bus}
+       </span>
+     );
+@@ -451,7 +451,7 @@ export function ShipBlueprint({
+           viewBox="0 12 250 88"
+           className="h-full w-full"
+           role="img"
+-          aria-label={`General arrangement drawing of the seed ship Exodus, ${OVERALL_M} metres overall: Whipple debris shield forward, cargo ring, twelve distributed cold-sleep bays inside the debris shadow, deployable radiators, aft fuel tanks and fusion drive, with docked payload modules`}
++          aria-label={`General arrangement drawing of the seed ship Exodus, ${OVERALL_M} metres overall: Whipple debris shield forward, magsail drum, cargo ring, twelve distributed cold-sleep bays inside the debris shadow, deployable droplet-curtain radiators, aft fuel tanks and fusion drive, with docked payload modules`}
+           preserveAspectRatio="xMidYMid meet"
+         >
+           {/* ── debris shadow cone (under everything) ── */}
+@@ -652,15 +652,20 @@ export function ShipBlueprint({
+             )}
+           </g>
+ 
+-          {/* ── deployable radiators — 2×2 wing on hinge masts ── */}
++          {/* ── deployable radiators — droplet curtains, shown broken ── */}
++          {/* 1,900 m × 4,500 m wetted curtains; 34 km² at 1,450 K rejects the
++              torch's ~1% waste heat. True length won't fit on the drawing —
++              standard drafting break, honestly labelled. */}
+           <g>
+             <path className="bp-ink-faint" d="M165.5,45.8 h2 M165.5,50.2 h2" />
++            {/* ventral curtains draw shorter — full reach would crowd the aft
++                drop-stages on the sheet; the break says true length anyway */}
+             {[
+-              { y: SPINE_TOP, a: -18 },
+-              { y: SPINE_TOP, a: -38 },
+-              { y: SPINE_BOT, a: 18 },
+-              { y: SPINE_BOT, a: 38 },
+-            ].map(({ y, a }) => (
++              { y: SPINE_TOP, a: -30, len: 19 },
++              { y: SPINE_TOP, a: -50, len: 19 },
++              { y: SPINE_BOT, a: 30, len: 15.6 },
++              { y: SPINE_BOT, a: 50, len: 15.6 },
++            ].map(({ y, a, len }) => (
+               <g key={`${y}-${a}`} transform={`translate(168,${y}) rotate(${a})`}>
+                 <circle className="bp-ink-dim" cx={0} cy={0} r={0.65} />
+                 <rect
+@@ -668,14 +673,19 @@ export function ShipBlueprint({
+                   className="bp-ink bp-draw"
+                   x={1.4}
+                   y={-2.6}
+-                  width={19}
++                  width={len - 2.6}
+                   height={5.2}
+                   style={{ fill: "rgba(214,162,106,0.06)" }}
+                 />
+-                {[4, 6.4, 8.8, 11.2, 13.6, 16, 18.4].map((x) => (
++                {Array.from({ length: 6 }, (_, k) => 2.8 + k * ((len - 4.2) / 5)).map((x) => (
+                   <path key={x} className="bp-ink-faint" d={`M${x},-2.6 v5.2`} />
+                 ))}
+-                <circle cx={21} cy={0} r={0.35} fill="rgba(251,191,36,0.85)" />
++                {/* break marks — the curtain continues off-drawing */}
++                <path
++                  className="bp-ink-dim"
++                  d={`M${len - 0.8},-2.6 l1.2,5.2 M${len + 1.2},-2.6 l1.2,5.2`}
++                />
++                <circle cx={len} cy={0} r={0.35} fill="rgba(251,191,36,0.85)" />
+               </g>
+             ))}
+           </g>
+@@ -723,6 +733,24 @@ export function ShipBlueprint({
+             <circle className="bp-phos" cx={217.3} cy={48} r={0.35} />
+           </g>
+ 
++          {/* ── magsail drum — 1,900 km of superconducting cable, stowed ── */}
++          <g>
++            <rect
++              pathLength={1}
++              className="bp-ink bp-draw"
++              x={22}
++              y={46.4}
++              width={9}
++              height={3.2}
++              rx={1.4}
++              style={{ fill: "rgba(123,235,166,0.04)" }}
++            />
++            <g className="bp-detail">
++              <path className="bp-ink-faint" d="M23.5,46.4 v3.2 M26.5,46.4 v3.2 M29.5,46.4 v3.2" />
++            </g>
++            <circle className="bp-phos" cx={31.6} cy={48} r={0.3} />
++          </g>
++
+           {/* ── station ruler — diamonds for docks, circles for bays ── */}
+           <g>
+             <path className="bp-ink-faint" d="M20,22 h166" />
+@@ -815,9 +843,9 @@ export function ShipBlueprint({
+               COLD-SLEEP BAYS — 1 COHORT (17) PER BAY
+             </text>
+             {/* radiators */}
+-            <path className="bp-ink-faint" d="M177,30.4 L179.5,33.5" />
+-            <text className="bp-txt" x={176} y={29.6}>
+-              DEPLOYABLE RADIATORS ×4 — RETRACT FOR BURN
++            <path className="bp-ink-faint" d="M176,25.6 L180,29.4" />
++            <text className="bp-txt" x={150} y={24}>
++              THERMAL REJECTION — 34 KM² (SHOWN BROKEN)
+             </text>
+             {/* fuel */}
+             <path className="bp-ink-faint" d="M200,62.4 V65.9" />
+@@ -907,7 +935,12 @@ export function ShipBlueprint({
+             </text>
+             {/* radiator temperature */}
+             <text className="bp-stamp-dim" x={176.5} y={38.4}>
+-              710 K
++              ×4 · 1,450 K · DROPLET
++            </text>
++            {/* magsail drum */}
++            <path className="bp-ink-faint" d="M26.5,46.2 V43.6" />
++            <text className="bp-stamp-dim" x={26.5} y={42.9} textAnchor="middle">
++              MAGSAIL — 1,900 KM LOOP
+             </text>
+             {/* fuel labels */}
+             <text className="bp-stamp-dim" x={200} y={32.4} textAnchor="end">
+@@ -948,7 +981,7 @@ export function ShipBlueprint({
+               GENERAL ARRANGEMENT — PAYLOAD CONFIG
+             </text>
+             <text className="bp-txt-dim" x={8.5} y={94.8}>
+-              DWG OE-104-GA · REV E · SCHEMATIC
++              DWG OE-104-GA · REV F · SCHEMATIC
+             </text>
+             <text className="bp-txt-dim" x={80.5} y={83.6}>
+               MASS
+diff --git a/src/screens/planet-select/PlanetSelect.tsx b/src/screens/planet-select/PlanetSelect.tsx
+index 92f6aa1..7c85a6f 100644
+--- a/src/screens/planet-select/PlanetSelect.tsx
++++ b/src/screens/planet-select/PlanetSelect.tsx
+@@ -208,6 +208,12 @@ export function PlanetSelect({
+                   </div>
+                 )}
+ 
++                {planet.abioticRisk && hasProbe && (
++                  <div className="hal-mono mb-3 border border-amber-400/40 bg-amber-400/10 p-2.5 text-[10px] leading-relaxed text-amber-200">
++                    ⚠ FREE O₂ — ORIGIN UNRESOLVED. Around M dwarfs, pre-main-sequence water loss can build abiotic oxygen (Luger &amp; Barnes 2015). A science lander's sealed bio-cabinet resolves biotic vs abiotic within 200 days of landfall. Until then: quarantine doctrine — suits sealed, no open-cycle life support.
++                  </div>
++                )}
++
+                 <DataRow label="ORBIT" value={`${planet.orbitAu.toFixed(3)} AU`} />
+                 <DataRow label="MASS" value={`${planet.massEarth.toFixed(2)} M⊕`} />
+                 {hasProbe ? (
+diff --git a/src/screens/profile/MissionProfile.tsx b/src/screens/profile/MissionProfile.tsx
+index 575bc88..956d4d3 100644
+--- a/src/screens/profile/MissionProfile.tsx
++++ b/src/screens/profile/MissionProfile.tsx
+@@ -33,6 +33,7 @@ export function MissionProfile({
+   const [finalStage, setFinalStage] = useState(0);
+   const prognosis = computePrognosis(planet, star, equipment, hasProbe);
+   const mass = equipment.reduce((a, e) => a + e.massT, 0);
++  const hasScience = equipment.some((e) => e.id === "science");
+ 
+   const gradeColor =
+     prognosis.score >= 78
+@@ -95,6 +96,13 @@ export function MissionProfile({
+                         SURFACE CONDITIONS UNKNOWN — BLIND LANDING
+                       </div>
+                     )}
++                    {planet.abioticRisk && hasProbe && (
++                      <div className={hasScience ? "text-phos/80" : "text-amber-300/80"}>
++                        {hasScience
++                          ? "FREE O₂ UNRESOLVED — SCIENCE LANDER ABOARD FOR ASSAY"
++                          : "FREE O₂ UNRESOLVED — QUARANTINE DOCTRINE, NO BIO-CABINET ABOARD"}
++                      </div>
++                    )}
+                   </div>
+                 </>
+               ) : (
+diff --git a/src/screens/star-select/StarSelect.tsx b/src/screens/star-select/StarSelect.tsx
+index 3fa0765..241309c 100644
+--- a/src/screens/star-select/StarSelect.tsx
++++ b/src/screens/star-select/StarSelect.tsx
+@@ -2,7 +2,7 @@
+ 
+ import { useState } from "react";
+ import type { FlareRisk, StarSystem } from "@/lib/mission/types";
+-import { STARS, transitYears } from "@/lib/mission/stars";
++import { STARS, transitYears, interceptSolution } from "@/lib/mission/stars";
+ import { HudPanel, DataRow, HudButton } from "@/components/common/HudPanel";
+ import { Starfield3D } from "./Starfield3D";
+ import { halcyonAudio } from "@/lib/mission/audio";
+@@ -144,6 +144,14 @@ export function StarSelect({
+                 value={`${star.luminositySolar.toFixed(4)} L☉`}
+               />
+               <DataRow label="COMPANIONS" value={star.companions} />
++              <DataRow
++                label="PROPER MOTION"
++                value={`${(interceptSolution(star).pmMasYr / 1000).toFixed(2)}″ / YR · ${interceptSolution(star).vtKms.toFixed(0)} KM/S`}
++              />
++              <DataRow
++                label="INTERCEPT LEAD"
++                value={`${Math.round(interceptSolution(star).aimAu).toLocaleString()} AU · ${interceptSolution(star).leadAngleDeg.toFixed(2)}°`}
++              />
+               <DataRow
+                 label="FLARE CLASS"
+                 value={star.flareRisk}
+diff --git a/src/screens/transit/TransitPlot.tsx b/src/screens/transit/TransitPlot.tsx
+index 211e296..f7a45a3 100644
+--- a/src/screens/transit/TransitPlot.tsx
++++ b/src/screens/transit/TransitPlot.tsx
+@@ -10,17 +10,27 @@ import {
+   DEPART_ANGLE_DEG,
+   JUPITER_ORBIT_AU,
+   BURN_DIST_AU,
++  BURN_YEARS,
+   CRUISE_C,
++  CRUISE_KMS,
+   SHIP_DRY_T,
+   PROP_T,
+   CREW_COUNT,
++  MAG_DEPLOY_LY,
++  MAG_YEARS,
++  MAG_V_ARR_KMS,
+   missionState,
++  properTimeYears,
++  solBeaconRxGhz,
++  shieldMarginPct,
++  totalYears,
+   fmtLightTime,
+-  fmtAu,
++  fmtRange,
+   fmtKms,
+   kineticEnergyJ,
+   transferRangeAu,
+ } from "@/lib/mission/astro";
++import { interceptSolution } from "@/lib/mission/stars";
+ 
+ // ─── Transit plot — Discovery-style departure plate ──────────────────────────
+ // Three panels: an SVG trajectory plate (draw-on plotter animation, flyby
+@@ -300,7 +310,7 @@ const DeparturePlate = memo(function DeparturePlate({ star }: { star: StarSystem
+             FUSION IGNITION
+           </text>
+           <text x={VB_W - 8} y={geo.ignition[1] + 27} textAnchor="end" className="hal-mono" fontSize="7.5" fill="#737373">
+-            +{BURN_DIST_AU} AU · 43 MIN BURN
++            +{BURN_DIST_AU} AU · SUSTAINED {BURN_YEARS.toFixed(1)} YR
+           </text>
+         </g>
+ 
+@@ -405,10 +415,18 @@ const EquationPlate = memo(function EquationPlate({
+ }) {
+   const rows = useMemo(() => {
+     const d = star.distanceLy;
+-    const tCruise = d / CRUISE_C;
++    const tTotal = totalYears(d);
++    const tCruise = (d - 0.06 - MAG_DEPLOY_LY) / CRUISE_C;
+     const ek = kineticEnergyJ(payloadMassT);
+     const exp = Math.floor(Math.log10(ek));
+     const man = ek / 10 ** exp;
++    // torch rocket equation, from the real masses
++    const m0 = SHIP_DRY_T + PROP_T + payloadMassT;
++    const mf = SHIP_DRY_T + payloadMassT + 0.124 * PROP_T;
++    const ve = (CRUISE_KMS - TRANSFER.exitSpeedKms) / Math.log(m0 / mf);
++    const dv = ve * Math.log(m0 / mf);
++    const tau = properTimeYears(d, tTotal);
++    const dTau = tTotal - tau;
+     const tex = (s: string) =>
+       katex.renderToString(s, { throwOnError: false, displayMode: false });
+     return [
+@@ -424,15 +442,29 @@ const EquationPlate = memo(function EquationPlate({
+           `\\delta=2\\arcsin\\!\\big(1/e\\big)=${TRANSFER.deltaDeg.toFixed(1)}^{\\circ}\\;,\\quad e=1+\\tfrac{r_p v_\\infty^{2}}{\\mu_{\\mathrm{J}}}=1.18`
+         ),
+       },
++      {
++        label: `TORCH — ${BURN_YEARS.toFixed(1)} YR SUSTAINED BURN`,
++        html: tex(
++          `\\Delta v=v_e\\ln\\!\\tfrac{m_0}{m_f}=${Math.round(ve).toLocaleString()}\\;\\mathrm{km/s}\\cdot\\ln\\!\\tfrac{${m0.toLocaleString()}}{${Math.round(mf).toLocaleString()}}=${Math.round(dv).toLocaleString()}\\;\\mathrm{km/s}`
++        ),
++      },
+       {
+         label: `CRUISE — ${star.name}`,
+         html: tex(
+-          `t=\\tfrac{d}{v_\\infty}=\\tfrac{${d.toFixed(3)}\\;\\mathrm{ly}}{0.100\\,c}=${tCruise.toFixed(1)}\\;\\mathrm{yr}`
++          `t=\\tfrac{d-d_{\\mathrm{brake}}}{0.100\\,c}\\approx${tCruise.toFixed(1)}\\;\\mathrm{yr}`
+         ),
+       },
+       {
+-        label: "SIGNAL LAG — ONE WAY",
+-        html: tex(`\\tau=\\tfrac{d}{c}=${d.toFixed(2)}\\;\\mathrm{yr}`),
++        label: "MAGSAIL BRAKE — RAM DRAG",
++        html: tex(
++          `v(t)=\\tfrac{v_0}{1+t/\\tau'}\\;\\Rightarrow\\;${Math.round(CRUISE_KMS).toLocaleString()}\\to${MAG_V_ARR_KMS.toLocaleString()}\\;\\mathrm{km/s}\\;\\mathrm{over}\\;${MAG_YEARS.toFixed(1)}\\;\\mathrm{yr}`
++        ),
++      },
++      {
++        label: "SHIP PROPER TIME @ γ = 1.005",
++        html: tex(
++          `\\tau=\\int\\!\\mathrm{d}t/\\gamma=${tau.toFixed(1)}\\;\\mathrm{yr}\\;(-${dTau.toFixed(2)}\\;\\mathrm{yr})`
++        ),
+       },
+       {
+         label: "KINETIC ENERGY AT CRUISE",
+@@ -476,12 +508,17 @@ const PHASE_META: Record<
+ > = {
+   TJI: { label: "TJI COAST", color: "text-neutral-300", dot: "#d4d4d4" },
+   FLYBY: { label: "FLYBY", color: "text-amber-300", dot: "#f5c76a" },
+-  BURN: { label: "FUSION BURN", color: "text-amber-300", dot: "#f5c76a" },
++  BURN: { label: "TORCH BURN", color: "text-amber-300", dot: "#f5c76a" },
+   CRUISE: { label: "CRUISE 0.100 C", color: "text-phos", dot: "#7beba6" },
++  MAGSAIL: { label: "MAGSAIL BRAKE", color: "text-amber-300", dot: "#f5c76a" },
++  CAPTURE: { label: "CAPTURE BURN", color: "text-amber-300", dot: "#f5c76a" },
+ };
+ 
+ function TelemetryPanel({ star, years }: { star: StarSystem; years: number }) {
+   const st = missionState(star.distanceLy, years);
++  const tau = properTimeYears(star.distanceLy, years);
++  const beacon = solBeaconRxGhz(st.velKms);
++  const shield = shieldMarginPct(star.distanceLy, years);
+   const [jit, setJit] = useState({ reactor: 84.2, hull: 291.4, vel: 0 });
+ 
+   useEffect(() => {
+@@ -513,22 +550,153 @@ function TelemetryPanel({ star, years }: { star: StarSystem; years: number }) {
+       </div>
+       <div className="tabular-nums">
+         <DataRow label="T+ / MISSION" value={`${years.toFixed(2)} YR`} />
+-        <DataRow label="RANGE / SOL" value={fmtAu(st.rangeAu)} />
++        <DataRow label="τ SHIP PROPER" value={`${tau.toFixed(2)} YR`} />
++        <DataRow label="RANGE / SOL" value={fmtRange(st.rangeAu)} />
+         <DataRow label="RANGE / DEST" value={`${st.remainingLy.toFixed(3)} LY`} />
+         <DataRow
+           label="VELOCITY"
+           value={fmtKms(st.velKms + (st.phase === "CRUISE" ? jit.vel : 0))}
+         />
++        <DataRow label="LIGHT SPEED β" value={st.beta.toFixed(5)} />
+         <DataRow label="LIGHT-TIME / SOL" value={fmtLightTime(st.rangeAu)} />
++        <DataRow
++          label="SOL BEACON RX"
++          value={`${beacon.toFixed(3)} GHZ`}
++          warn={beacon < 8.2}
++        />
+         <DataRow label="FUSION STOCKPILE" value={`${st.propPct.toFixed(1)} %`} />
+-        <DataRow label="REACTOR" value={`${jit.reactor.toFixed(1)} MW`} />
++        <DataRow
++          label="SHIELD MARGIN"
++          value={`${shield.toFixed(1)} %`}
++          warn={shield < 50}
++        />
+         <DataRow label="HULL TEMP" value={`${jit.hull.toFixed(1)} K`} />
+-        <DataRow label="COLD SLEEP" value={`${CREW_COUNT}/${CREW_COUNT} NOMINAL`} />
++        <DataRow label="TORPOR" value={`${CREW_COUNT}/${CREW_COUNT} NOMINAL`} />
+       </div>
+     </HudPanel>
+   );
+ }
+ 
++// ═══════════════════════ Intercept inset — proper-motion lead ═════════════════
++
++const InterceptPanel = memo(function InterceptPanel({ star }: { star: StarSystem }) {
++  const geo = useMemo(() => {
++    const icpt = interceptSolution(star);
++    const T = totalYears(star.distanceLy);
++    // pm screen direction: RA → +x, Dec → up (screen y flipped). Stars with
++    // southward pm get the geometry dropped to the upper half so the aim
++    // vector never lands in the footer.
++    const ang = Math.atan2(star.pmDecMasYr, star.pmRaMasYr);
++    const south = star.pmDecMasYr < 0;
++    const L = 54; // px — deliberately exaggerated
++    const vis: [number, number] = [252, south ? 64 : 96];
++    const icptPt: [number, number] = [
++      vis[0] + L * Math.cos(ang),
++      vis[1] - L * Math.sin(ang),
++    ];
++    return { icpt, T, vis, icptPt, south };
++  }, [star]);
++
++  const { icpt, T, vis, icptPt, south } = geo;
++  const trajAng = (Math.atan2(vis[1] - icptPt[1], icptPt[0] - 14) * 180) / Math.PI;
++  const icptRight = icptPt[0] <= 208; // ring far enough right for a start-anchored label
++  // AIM text rides 30% along the lead vector, offset off the line
++  const aimLbl: [number, number] = [
++    vis[0] + (icptPt[0] - vis[0]) * 0.3 - 10,
++    vis[1] + (icptPt[1] - vis[1]) * 0.3 + (south ? 10 : -8),
++  ];
++
++  return (
++    <HudPanel
++      title="Intercept — Proper Motion"
++      code="PLOT 03-D"
++      bodyClassName="p-2 sm:p-3"
++    >
++      <svg
++        viewBox="0 0 320 168"
++        className="h-auto w-full select-none"
++        role="img"
++        aria-label={`Intercept geometry for ${star.name}: the ship aims ahead of the star's visual position along its proper motion`}
++      >
++        {/* visual line of sight — dashed, from Sol */}
++        <line
++          x1="14" y1={vis[1]} x2={vis[0]} y2={vis[1]}
++          stroke="#ffffff" strokeOpacity="0.28" strokeWidth="0.9" strokeDasharray="4 5"
++        />
++        <text x="16" y="46" className="hal-mono" fontSize="6.5" fill="#737373">
++          LINE OF SIGHT · EPOCH 2098 — LIGHT LEFT {star.distanceLy.toFixed(1)} YR AGO
++        </text>
++
++        {/* true trajectory — solid, to the intercept */}
++        <line
++          x1="14" y1={vis[1]} x2={icptPt[0]} y2={icptPt[1]}
++          stroke={IVORY} strokeWidth="1.3" filter="url(#tp-glow)"
++        />
++        <path
++          d={`M${icptPt[0] - 9},${icptPt[1] - 6.4} L${icptPt[0] + 1},${icptPt[1]} L${icptPt[0] - 9},${icptPt[1] + 6.4} Z`}
++          fill={IVORY}
++          transform={`rotate(${trajAng} ${icptPt[0]} ${icptPt[1]})`}
++        />
++        <text x="20" y="128" className="hal-mono" fontSize="7.5" fill={IVORY}>
++          EXODUS — 0.100 C · T = {T.toFixed(0)} YR
++        </text>
++
++        {/* visual position — dashed cross */}
++        <g stroke="#a3a3ac" strokeWidth="1">
++          <line x1={vis[0] - 5} y1={vis[1]} x2={vis[0] + 5} y2={vis[1]} />
++          <line x1={vis[0]} y1={vis[1] - 5} x2={vis[0]} y2={vis[1] + 5} />
++        </g>
++        <text
++          x={vis[0] - 9}
++          y={vis[1] + 3.5}
++          textAnchor="end"
++          className="hal-mono" fontSize="7.5" fill="#a3a3ac"
++        >
++          AS SEEN
++        </text>
++
++        {/* intercept position — solid ring */}
++        <circle
++          cx={icptPt[0]} cy={icptPt[1]} r="5.5"
++          fill="none" stroke={PHOS} strokeWidth="1.2" filter="url(#tp-glow)"
++        />
++        <circle cx={icptPt[0]} cy={icptPt[1]} r="1.6" fill={PHOS} />
++        <text
++          x={icptRight ? icptPt[0] + 10 : icptPt[0] - 9}
++          y={icptPt[1] - 6}
++          textAnchor={icptRight ? "start" : "end"}
++          className="hal-mono" fontSize="7.5" fill="#a5f0c3"
++        >
++          INTERCEPT {Math.round(2098.274 + T)}
++        </text>
++
++        {/* lead vector */}
++        <line
++          x1={vis[0]} y1={vis[1]} x2={icptPt[0]} y2={icptPt[1]}
++          stroke={AMBER} strokeWidth="0.9" strokeDasharray="3 3"
++        />
++        <text
++          x={aimLbl[0]}
++          y={aimLbl[1]}
++          textAnchor="end"
++          className="hal-mono" fontSize="7" fill={AMBER}
++        >
++          AIM +{Math.round(icpt.aimAu).toLocaleString()} AU
++        </text>
++
++        {/* footer — true numbers */}
++        <line x1="14" y1="140" x2="306" y2="140" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="0.8" />
++        <text x="14" y="152" className="hal-mono" fontSize="7" fill="#737373">
++          μ = {(icpt.pmMasYr / 1000).toFixed(2)}″/YR · v_t = {icpt.vtKms.toFixed(0)} KM/S
++        </text>
++        <text x="14" y="161" className="hal-mono" fontSize="7" fill="#737373">
++          LEAD ANGLE {icpt.leadAngleDeg.toFixed(2)}° TRUE · OFFSET DRAWN ~×10³
++        </text>
++      </svg>
++    </HudPanel>
++  );
++});
++
+ // ═══════════════════════ Composition ════════════════════════════════════════
+ 
+ export default function TransitPlot({
+@@ -542,8 +710,9 @@ export default function TransitPlot({
+ }) {
+   return (
+     <div className="grid gap-3 lg:grid-cols-12">
+-      <div className="lg:col-span-7">
++      <div className="space-y-3 lg:col-span-7">
+         <DeparturePlate star={star} />
++        <InterceptPanel star={star} />
+       </div>
+       <div className="space-y-3 lg:col-span-5">
+         <EquationPlate star={star} payloadMassT={payloadMassT} />
+diff --git a/src/screens/transit/TransitScreen.tsx b/src/screens/transit/TransitScreen.tsx
+index 80451e9..9111cef 100644
+--- a/src/screens/transit/TransitScreen.tsx
++++ b/src/screens/transit/TransitScreen.tsx
+@@ -1,10 +1,17 @@
+ "use client";
+ 
+-import { useEffect, useRef, useState } from "react";
++import { useEffect, useMemo, useRef, useState } from "react";
+ import dynamic from "next/dynamic";
+ import type { Planet, StarSystem } from "@/lib/mission/types";
+ import { transitYears } from "@/lib/mission/stars";
+-import { missionState } from "@/lib/mission/astro";
++import {
++  missionState,
++  fmtLightTime,
++  phaseBoundaries,
++  MAG_YEARS,
++  CAPTURE_YEARS,
++} from "@/lib/mission/astro";
++import { transitEvents } from "@/lib/mission/events";
+ import { Lissajous } from "@/components/common/Lissajous";
+ import { HudButton } from "@/components/common/HudPanel";
+ import { halcyonAudio } from "@/lib/mission/audio";
+@@ -13,6 +20,7 @@ import {
+   HALCYON_BLIND_SURVEY,
+   HALCYON_JOVIAN_LINE,
+   HALCYON_KINETIC_LINE,
++  HALCYON_MAGSAIL_LINE,
+   HALCYON_SURVEY_DONE,
+   halcyonTransit,
+ } from "@/lib/mission/halcyon";
+@@ -28,6 +36,7 @@ export function TransitScreen({
+   planets,
+   hasProbe,
+   payloadMassT,
++  equipment,
+   onDone,
+   onSpeak,
+ }: {
+@@ -35,10 +44,12 @@ export function TransitScreen({
+   planets: Planet[];
+   hasProbe: boolean;
+   payloadMassT: number;
++  equipment: string[];
+   onDone: () => void;
+   onSpeak: (line: string) => void;
+ }) {
+   const totalYears = transitYears(star);
++  const events = useMemo(() => transitEvents(star, equipment), [star, equipment]);
+   const [step, setStep] = useState(0); // 0 sep, 1 transit, 2 arrival, 3 survey, 4 complete
+   const [years, setYears] = useState(0);
+   const [signals, setSignals] = useState(0);
+@@ -60,48 +71,54 @@ export function TransitScreen({
+     });
+     at(3400, () => setStep(1));
+     at(3800, () => onSpeak(halcyonTransit(star, Math.round(totalYears))));
+-    at(6000, () => onSpeak(HALCYON_JOVIAN_LINE));
+-    at(8800, () => onSpeak(HALCYON_KINETIC_LINE));
++    at(6300, () => onSpeak(HALCYON_JOVIAN_LINE));
++    at(8600, () => onSpeak(HALCYON_KINETIC_LINE));
++    at(10800, () => {
++      // one mid-transit event, spoken — the decades are not kind
++      const spoken = events.find((e) => e.speech);
++      if (spoken?.speech) onSpeak(spoken.speech);
++    });
++    at(13200, () => onSpeak(HALCYON_MAGSAIL_LINE));
+ 
+-    // step 1 — transit counting (7 s of screen time = decades)
+-    at(11000, () => {
++    // step 1 — transit counting (8 s of screen time = decades)
++    at(15400, () => {
+       setStep(2);
+       halcyonAudio.ping();
+       onSpeak(HALCYON_ARRIVAL);
+     });
+ 
+     // step 2 — arrival
+-    at(15000, () => setStep(3));
++    at(19000, () => setStep(3));
+ 
+     // step 3 — survey signals
+     if (hasProbe) {
+       planets.forEach((_, i) => {
+-        at(15600 + i * 850, () => {
++        at(19600 + i * 850, () => {
+           setSignals(i + 1);
+           halcyonAudio.ping();
+         });
+       });
+-      at(15600 + planets.length * 850 + 900, () => {
++      at(19600 + planets.length * 850 + 900, () => {
+         setStep(4);
+         halcyonAudio.confirm();
+         onSpeak(HALCYON_SURVEY_DONE);
+       });
+-      at(16500 + planets.length * 850 + 2400, () => {
++      at(20500 + planets.length * 850 + 2400, () => {
+         if (!doneRef.current) {
+           doneRef.current = true;
+           onDone();
+         }
+       });
+     } else {
+-      at(17200, () => {
++      at(20200, () => {
+         halcyonAudio.scan();
+         setSignals(planets.length);
+       });
+-      at(20000, () => {
++      at(23000, () => {
+         setStep(4);
+         onSpeak(HALCYON_BLIND_SURVEY);
+       });
+-      at(23000, () => {
++      at(26000, () => {
+         if (!doneRef.current) {
+           doneRef.current = true;
+           onDone();
+@@ -119,7 +136,7 @@ export function TransitScreen({
+     const t0 = performance.now();
+     let raf = 0;
+     const tick = (t: number) => {
+-      const p = Math.min(1, (t - t0) / 6800);
++      const p = Math.min(1, (t - t0) / 11000);
+       setYears(p * totalYears);
+       if (p < 1) raf = requestAnimationFrame(tick);
+     };
+@@ -136,8 +153,12 @@ export function TransitScreen({
+     }
+   };
+ 
+-  const remainingLy = missionState(star.distanceLy, years).remainingLy;
++  const st = missionState(star.distanceLy, years);
++  const remainingLy = st.remainingLy;
+   const landable = planets.filter((p) => p.landable).length;
++  const pb = phaseBoundaries(star.distanceLy);
++  const fBurn = (pb.tBurnEnd / totalYears) * 100;
++  const fMag = ((pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS) / totalYears) * 100;
+ 
+   return (
+     <div className="relative mx-auto flex min-h-[calc(100vh-8.5rem)] max-w-5xl flex-col items-center justify-center px-4 py-8">
+@@ -178,13 +199,13 @@ export function TransitScreen({
+                 INTERSTELLAR TRANSIT
+               </div>
+               <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-neutral-400">
+-                DESTINATION {star.name} · JOVIAN DEPARTURE SOLUTION · CRUISE 0.100 C
++                DESTINATION {star.name} · JOVIAN DEPARTURE · CRUISE 0.100 C · MAGSAIL BRAKE {Math.round(totalYears - MAG_YEARS - CAPTURE_YEARS + 2098.274)}
+               </div>
+             </div>
+ 
+-            <div className="mx-auto grid max-w-2xl grid-cols-3 gap-3 border border-ink/10 bg-black/40 p-3 text-center sm:p-4">
++            <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 border border-ink/10 bg-black/40 p-3 text-center sm:grid-cols-4 sm:p-4">
+               <div>
+-                <div className="hal-display glow-phos text-xl text-phos sm:text-3xl">
++                <div className="hal-display glow-phos text-xl text-phos sm:text-2xl">
+                   {years.toFixed(1)}
+                 </div>
+                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
+@@ -192,7 +213,7 @@ export function TransitScreen({
+                 </div>
+               </div>
+               <div>
+-                <div className="hal-display text-xl text-ink sm:text-3xl">
++                <div className="hal-display text-xl text-ink sm:text-2xl">
+                   {remainingLy.toFixed(2)}
+                 </div>
+                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
+@@ -200,11 +221,19 @@ export function TransitScreen({
+                 </div>
+               </div>
+               <div>
+-                <div className="hal-display text-xl text-ink sm:text-3xl">
++                <div className="hal-display text-xl text-ink sm:text-2xl">
++                  {fmtLightTime(st.rangeAu)}
++                </div>
++                <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
++                  LIGHT-TIME TO SOL
++                </div>
++              </div>
++              <div>
++                <div className="hal-display text-xl text-ink sm:text-2xl">
+                   207
+                 </div>
+                 <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
+-                  CREW · COLD SLEEP
++                  CREW · TORPOR
+                 </div>
+               </div>
+             </div>
+@@ -217,9 +246,25 @@ export function TransitScreen({
+                   className="h-full bg-ink/85 transition-[width] duration-100"
+                   style={{ width: `${(years / totalYears) * 100}%` }}
+                 />
++                {/* phase ticks — torch out, magsail deploy */}
++                <div className="pointer-events-none absolute inset-0">
++                  {[fBurn, fMag].map((f) => (
++                    <div
++                      key={f}
++                      className="absolute top-[-3px] h-[14px] w-px bg-amber-400/50"
++                      style={{ left: `${f}%` }}
++                    />
++                  ))}
++                </div>
+               </div>
+               <div className="hal-mono mt-1.5 flex justify-between text-[9px] tracking-widest text-neutral-600">
+                 <span>TJI BURN 2098.274</span>
++                <span className="hidden sm:inline text-amber-400/60">
++                  TORCH OUT {Math.round(2098.274 + pb.tBurnEnd)}
++                </span>
++                <span className="hidden sm:inline text-amber-400/60">
++                  MAGSAIL DEPLOY {Math.round(2098.274 + pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS)}
++                </span>
+                 <span>ARRIVAL {Math.round(2098.274 + totalYears)}</span>
+               </div>
+             </div>
+-- 
+2.47.3
+
+
+From 4dc2225846ca1551c002d8816ab603415eb7aa56 Mon Sep 17 00:00:00 2001
+From: Z User <z@container>
+Date: Wed, 4 Nov 2026 13:06:32 +0000
+Subject: [PATCH 2/2] =?UTF-8?q?Design=20notes=20=C2=A75=20expanded=20?=
+ =?UTF-8?q?=E2=80=94=20the=20campaign=20priced,=20the=20build=20ordered?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- §5.1 arrival-order physics: why the courier is the only pre-arrival
+  surveyor (+0.1% c buys months; 0.135 c is 69% propellant), corridor
+  scouts as magsail feedforward (factor-2 density error = 12/49-yr brake),
+  the post-capture economy; CAMPAIGN-phase proposal (0–15 yr, command
+  watch ages 1:1).
+- §5.2 destinations annotated with Δv: belt hops ~0.2 m/s escape,
+  kilometre-class comet = 3×10⁸ t volatiles, retrograde gravity capture.
+- §5.3 the well priced: ~90:1 per kg returned Earth-class, ~1,000:1 on
+  the τ Cet super-Earths (1.45 g, v_esc 17 km/s); droplet-curtain reuse.
+- §5.4 build order T0–T7: capture orbit → backbone → depot → belt
+  foundry (SEED's first landing is a rock) → beamed power → orbital
+  quarantine → surface → the second ship.
+- §5.5 the void-born: gravity referendum, Δv toll, archive custody,
+  the 48-kt question; population math with the embryo vault.
+- §5.6 strategic bank: 5,280 t fusion stock ≈ 1.8e21 J ≈ 0.85× the 2098
+  impactor — a century at ~0.6 TW, or one departure burn.
+- §5.7 survey-reveal table (finds gated by hardware); §5.8 per-system
+  matrix extended (capture assists, dust, flare minutes, the Proxima
+  warranty); §5.9 code hooks: live vs proposed.
+
+engine.ts: τ Cet e/f catalog note corrected to the generator's own
+arithmetic (1.45 g, not 1.7 g) — the well is deep, and now it is
+consistently deep.
+---
+ docs/DESIGN_NOTES.md      | 199 +++++++++++++++++++++++++++++++-------
+ src/lib/mission/engine.ts |   2 +-
+ 2 files changed, 163 insertions(+), 38 deletions(-)
+
+diff --git a/docs/DESIGN_NOTES.md b/docs/DESIGN_NOTES.md
+index 145927e..d5a2243 100644
+--- a/docs/DESIGN_NOTES.md
++++ b/docs/DESIGN_NOTES.md
+@@ -230,13 +230,32 @@ The mission is not a landing with support infrastructure; it is an
+ branch office down a gravity well. The survey campaign exists to tell us
+ which well, and whether.
+ 
+-### 5.1 Campaign waves — what is sent, and when
++### 5.1 The physics of arriving first — campaign waves
++
++Three velocity facts constrain every probe plan:
++
++1. **Everything released in cruise shares the ship's 0.100 c.** A coaster
++   given +0.1 % c of separation Δv in year 3 arrives ~5 months ahead at
++   Proxima; a 25-year lead needs 0.135 c, and 0.135 c needs a torch —
++   69 % of the stage is propellant (mass ratio 3.2 at our 0.116 c exhaust).
++   The ship carries one spare torch stage, which is why there is exactly
++   one pre-arrival surveyor, not ten.
++2. **The magsail brakes the ship, not her offspring.** Probes without
++   sails of their own cross the system at whatever speed they arrive
++   with. A free flyby at 4,000 km/s (post-brake, pre-capture) is a
++   spectrometer's business, not a camera's.
++3. **After capture, everything is cheap again.** A bound orbit at ~40 km/s
++   makes the ship a mothership: belt rendezvous costs single-digit km/s,
++   small-body hops cost metres per second — only the wells are expensive
++   again (5.3).
++
++The waves, constrained accordingly:
+ 
+ | Wave | When | What | Data it returns |
+ | --- | --- | --- | --- |
+ | 0 — Precursors | 2060s–90s, Earth-launched (canon) | Gram-scale laser sail swarms + precursor interferometry | the coarse system data on the STAR screen — this is where "known worlds" come from; mass/orbit only |
+-| 1 — The courier | 2098, ship-launched at Jovian departure | The VLBI probe (120 t on a ~380 t torch stage, 0.135 c — it has its OWN exhaust and magsail) | survey-grade imagery from a captured orbit, arriving ~25–30 yr ahead of the ship; its laser downlink overtakes us years before arrival |
+-| 2 — The micro-swarm | launched from the ship during transit (years 3–10) | The table below — small coasters, one instrument each | one dossier layer per probe, resolving on approach |
++| 1 — The courier | 2098, ship-launched at Jovian departure | The VLBI probe (120 t on a ~380 t torch stage, 0.135 c — its OWN exhaust, its OWN magsail) | survey-grade imagery from a captured orbit — **≈25 yr of survey lead at Proxima, ≈45 yr at τ Cet** (the lead grows with distance); its downlink reaches the ship decades before arrival |
++| 2 — Corridor & approach | corridor scouts: released in transit, riding a fraction of a km/s ahead for decades; flyby coasters: released on final approach | small coasters, one instrument each (table below) | scouts sample the braking corridor before the ship reaches it — **the magsail deployment point is set from measured ISM density, not an atlas** (a factor-2 density error turns the 24.7-yr brake into 12 or 49 yr; the reserve, or the calendar, pays the difference). Coasters cross the outer system at 4,000 km/s: spectra, particles, dust |
+ | 3 — Arrival infrastructure | system entry, before any surface contact | SEED-robotics: relay constellation, ISRU survey crawlers on the chosen moon/asteroid | the comms/power backbone for everything after |
+ 
+ What Wave-2 colonists actually want, mapped to real instrument classes:
+@@ -256,81 +275,187 @@ certainty vs cargo is the trade. Wave-2 results can **contradict the courier**
+ buy *certainty*, not just data. Land blind and every unknown becomes a
+ colony-start risk event drawn from the seed.
+ 
++**The campaign clock.** After CAPTURE the mission gains a CAMPAIGN phase —
++0–15 yr, player-set. HALCYON and the SEED robots can run the probes alone,
++but the charter requires human sign-off for landfall, and the command watch
++(3) wakes at system entry young, aging one second per second. Campaign
++years are the only resource aboard that cannot be remanufactured. The 204
++sleep on — each early thaw carries risk scaled by years in transit (§4).
++
+ ### 5.2 Where the hardware goes — destinations by what they're for
+ 
+ The system survey isn't "scan the planet"; it's an infrastructure survey.
+ Specialized assets go to specialized places:
+ 
+-- **Gas giant (if present)** — the volatiles & fuel depot: He-3 skimming for
+-  the next generation of ships, radiation-belt mapping (hazard), icy moons
+-  (water, organics). A cold Jupiter like ε Ind b is a gift: it shepherds the
+-  small bodies into reachable families.
++- **Gas giant (if present)** — the volatiles & fuel depot: He-3 skim passes
++  at perijove (decade-scale collection for the *next* ship's torch),
++  radiation-belt mapping first (hazard), icy moons (water, organics). A
++  cold Jupiter like ε Ind b is a gift twice over: it shepherds the small
++  bodies into reachable families, and a retrograde gravity pass can shed
++  the last km/s of arrival free — capture without spending the reserve.
+ - **Asteroid belts / debris disks** (ε Eri is the archetype) — metals,
+-  feedstock, low-Δv industry. The first factory goes here, not on the planet.
+-- **Icy moons & comets** — water and propellant. Every kilogram of shielding
+-  and reaction mass that doesn't come up a gravity well.
++  feedstock, low-Δv industry: rendezvous from the capture orbit is
++  single-digit km/s, and a 300-m rock has ~0.2 m/s of escape velocity —
++  hopping between belt bodies is cheaper than walking. The first factory
++  goes here, not on the planet.
++- **Icy moons & comets** — water and propellant. One kilometre-class ice
++  body (r ≈ 500 m, 0.6 g/cm³) holds ~3×10⁸ t of volatiles: the depot
++  problem is choice, not scarcity. Every kilogram of shielding and
++  reaction mass that doesn't come up a gravity well.
+ - **The scorched inner world** — beamed-power site: thin atmosphere, brutal
+   insolation, nobody lives there, and it can beam power anywhere in-system.
+ - **L4/L5 & high orbits of the HZ world** — the relay constellation, staging
+-  depots, the quarantine station (see 5.5).
++  depots, the quarantine station (5.4, T5).
+ - **The HZ world itself** — last, not first. Sealed bio-assay before any
+   open-cycle contact (the abiotic-O₂ branch, engine.ts REV F).
+ 
+-### 5.3 The orbital-first doctrine
++### 5.3 The orbital-first doctrine — the well, priced
+ 
+ The user-facing thesis: **stay out of the well until the well is worth it.**
+-Surface-to-orbit costs 8–9 km/s every round trip; asteroid rendezvous from
+-interplanetary arrival costs a fraction of that, and nothing you build in
+-orbit falls down. Consequences for the game:
++
++- An Earth-class well taxes ~9–10 km/s up; a chemical round trip is a
++  **~90:1 mass ratio per kilogram returned**.
++- The τ Cet super-Earths (3.9 M⊕, 1.65 R⊕ ⇒ 1.45 g, v_esc ≈ 17 km/s) tax
++  ~15 km/s up, ~30 km/s round trip: **~1,000:1 per kilogram returned**.
++  On such worlds the surface is an embassy, not a suburb — and τ Cet is
++  the *textbook G-twin* of the catalog. The wells are deeper than the
++  romance.
++- Nothing you build in orbit falls down; everything you land stays landed
++  until you pay again.
++
++Consequences for the game:
+ 
+ - The SEED lander stays mandatory for the *surface branch* but the
+   **PLANET screen becomes a DESTINATION screen**: a world, a moon, or an
+   orbit is a valid target.
+ - **The Exodus never lands.** She is the founding orbital asset — the
+   reactor, the machine shop, the genetic archive, and the only hull rated
+-  for the interstellar medium. Parking her in a graveyard orbit is doctrine.
++  for the interstellar medium. Parking her in a graveyard orbit is
++  doctrine; her 34 km² of droplet curtain, oversized forever once the
++  torch went cold, is the foundry's first heat-rejection asset.
+ - Surface packages become *exports* from orbital industry, not imports
+   from orbit: the first thing the asteroid factory builds is the landing
+   gear for everything after it.
+ 
+-### 5.4 Spacers — the crew who refuse the well
++### 5.4 The build order — what stands on what
++
++Each tier consumes survey layers (5.1–5.2) and unlocks the next. The
++player is scheduling an economy, not placing buildings:
++
++| Tier | What stands | Consumes | Unlocks |
++| --- | --- | --- | --- |
++| T0 | the capture orbit itself | magsail + reserve (already flown) | the ship as mothership: reactor, machine shop, archive, surplus radiator area |
++| T1 | nav & comms backbone | navbeacon + commsat (exist) | automation radius; the Earth-link home — the final archive broadcast, still arriving years after it was sent |
++| T2 | propellant depot at a comet or ice moon | refinery kit (exists) + electrolysis | everything after gets cheap: tugs, cheap insertions, return legs |
++| T3 | belt foundry | SEED lander — landed on the *asteroid* (the twist: SEED's first landing is a rock, not the world) | structural mass, beam extrusion, the landing gear for everything that follows |
++| T4 | beamed power + flare watch | SPS (exists); L1 sentinel (proposed, 5.9) | surface ops without reactor-first; minutes-class flare warning — enough to safe electronics, not enough to move people (light 24 s, particles ~2 min at 0.05 AU): on flare worlds, habitation is buried, permanently |
++| T5 | quarantine station at L4/L5 | the science lander's bio-cabinet, relocated to orbit | the abiotic-O₂ verdict **before** landfall; orbital sample-return assay — touching nothing until the question is answered |
++| T6 | the surface branch | T1–T5 + a certified site | the colony proper |
++| T7 | the second ship | He-3 bank + foundry output + the 48-kt question (5.5) | Exodus II — or not |
++
++### 5.5 Spacers — the void-born
+ 
+ Some fraction of the 207 will elect never to make planetfall even when it's
+ available: the shipyard crews, the refinery watch, the relay maintainers —
+ and their children, who will be multigenerational by simple arithmetic
+-(Proxima-class transits are 60–140 yr; the colony's second generation is
+-born in orbit regardless). Design consequences:
++(transits are 63–140 yr; the colony's second generation is born in orbit
++regardless of doctrine). Design consequences:
+ 
+ - The crew manifest gains an **allocation question** (surface vs orbital
+   cohort split), sharing UI language with the payload budget.
+ - Population genetics quietly favors the split: two semi-isolated
+-  populations (orbital + surface) exchange migrants and keep a much larger
+-  effective population than either alone.
+-- HALCYON gets a line about it, because of course he does.
+-
+-### 5.5 What the player is managing (the tradeoff graph)
++  populations exchanging migrants hold a much larger effective population
++  than either alone. With the 2.1M-embryo vault aboard, the living
++  population sizes itself for **culture and skills**, not genes — but the
++  heavy-industry cohort is seventeen people, and that fact is
++  load-bearing.
++- **The gravity referendum.** The spin habs' g-level is a constitutional
++  constant, re-voted: 1.0 g keeps the children planetfall-capable and
++  costs structural mass; 0.4 g is cheap and permanent — spacer bones make
++  the choice for the next generation. The vote recurs because the
++  consequences don't.
++- **The Δv toll.** Everything the surface branch consumes rides orbital
++  logistics — reaction mass, spares, beamed power — and the void-born hold
++  that choke point without firing a shot. But the surface holds the
++  volume, the heat sinks and the sky. Interdependence, not dominance:
++  that is the stable political shape, and the event table should price
++  departures from it (embargo, defection, migration treaties).
++- **The archive custody.** The gene vault (2.1M embryos): shipboard, where
++  the void-born hold the future as leverage, or down the well, where the
++  surface majority claims it. A vote, not a battle.
++- **The 48,000-tonne question.** Break the Exodus for refined colony mass
++  — the surface windfall — or keep her sovereign: the orbital capital, the
++  reactor, the only hull rated for the ISM, and the seed of Exodus II.
++  HALCYON: *"She has carried us for a hundred and forty years. Whether she
++  is a ship or a quarry is above my clearance."*
++- HALCYON, on the census: *"The manifest lists two hundred and seven
++  destinations, Commander. The ship is one of them."*
++
++### 5.6 What the player is managing (the tradeoff graph)
+ 
+ - **Certainty vs mass** — probes and assay capability against tonnes of
+   colony. (Live today: VLBI, science lander.)
++- **Campaign years vs command career** — the clock of 5.1: survey depth is
++  bought with the only irreplaceable resource aboard.
+ - **Redundancy vs margin** — shipshop + torpor reserve batteries vs more
+   of everything else; the transit-events system prices the choice.
+-- **Surface vs orbital** — where the industrial mass goes (5.3).
+-- **Present vs future** — He-3 from the gas giant only matters if someone
+-  builds the second ship. The endgame question: does this colony launch
+-  its own Exodus?
+-- **Quarantine vs speed** — the abiotic-O₂ world: assay it slowly with a
+-  bio-cabinet, or accept the risk and settle fast.
++- **Surface vs orbital** — where the industrial mass goes (5.3), and the
++  cohort split that follows it (5.5).
++- **Present vs future** — the strategic bank: post-capture the tanks hold
++  ~5,280 t of fusion stock ≈ 1.8×10²¹ J — within a factor of one of the
++  2098 impactor (2.2×10²¹ J). A century at ~0.6 TW, or the departure burn
++  of one more ship. He-3 from the gas giant only matters if someone
++  builds her.
++- **Quarantine vs speed** — the abiotic-O₂ world: assay slowly from orbit
++  (T5 — costly, safe), land the bio-cabinet (cheaper, riskier), or accept
++  the risk and settle fast.
++
++### 5.7 What is found — the survey reveals
++
++Space is not filler between the star and the planet; it is where the
++colony's balance sheet lives. Finds are seeded per system and **gated by
++having sent hardware to the right place** — no cryobot, no ocean:
++
++| Find | Where | Gated by | Payoff |
++| --- | --- | --- | --- |
++| the good belt | ore assay (ε Eri-class) | mapper + volatiles orbiter | foundry site (T3) |
++| a cometary family | the halo, stirred by a giant or the binary | corridor & flyby spectra | the depot (T2) |
++| a subsurface ocean | Europa-analog ice moon | cryobot (proposed) | bio question no. 2 — the quarantine doctrine applies twice |
++| He-3 concentration | the giant's perijove passes | skim-return hardware (proposed) | the second-ship option (T7) |
++| the O₂ verdict | the HZ world | bio-cabinet / orbital sample return | +2 / −6 (live today) |
++| microfossils in a carbonaceous chondrite | a D-type in the belt | science lander on that body | pure science — and the panspermia question, forever open |
++| an interstellar capture | the belt, if the seed is kind | mapper | someone else's leftovers, older than the system — the best museum piece in reach |
++| stable resonance parking orbits | orbital-mechanics survey | HALCYON, free | real estate: the relays and the quarantine station go here |
+ 
+-### 5.6 How the plan changes by system (the payoff)
++### 5.8 How the plan changes by system (the payoff)
+ 
+ | System archetype | Example | The plan bends toward |
+ | --- | --- | --- |
+-| Flare M dwarf | Proxima, Wolf 359 | orbital + terminator-string outposts; shielding mass over lander mass; SPS over surface solar |
+-| Quiet M/K dwarf | Ross 128, Lacaille 9352, ε Ind | cheap surface branch possible; still assay-first (abiotic O₂ risk is highest here) |
+-| G-twin | τ Cet, α Cen A | the textbook surface-first case — if the debris disk cooperates |
+-| Young dusty K dwarf | ε Eri | asteroid industry first; dust-hardened relays; the best factory site in the catalog |
+-| Giant-bearing system | ε Ind, ε Eri | volatiles economy; He-3 option; radiation-belt survey before anything else |
+-| No viable world at all | (possible) | pure orbital colony — the free-fort; the PLANET screen's honest answer is "none of these, take the belt" |
++| Flare M dwarf | Proxima, Wolf 359, L 726-8 | orbital + terminator-string outposts; shielding mass over lander mass; SPS over surface solar; buried habitation is permanent, not drilled when the sentinel screams (minutes of warning safes electronics only). Proxima alone has a warranty: α Cen A is 0.2 ly on — two years for a *refuelled* vessel, if the He-3 bank ever fills |
++| Quiet M/K dwarf | Ross 128, Lacaille 9352, ε Ind | cheap surface branch possible; still assay-first (abiotic-O₂ risk is highest here); ε Ind's cold Jupiter is the free capture assist |
++| G-twin | τ Cet, α Cen A | the textbook surface-first case — except the τ Cet wells cost ~1,000 kg of rocket per kg returned, the metal-poor belt is lean and the comets are fat: the orbital colony par excellence |
++| Young dusty K dwarf | ε Eri | asteroid industry first; dust-hardened relays; Whipple margin starts lower and the event table knows it; the best factory site in the catalog; Ægir's belts mapped before any moon ops |
++| Giant-bearing system | ε Ind, ε Eri | volatiles economy; He-3 option; radiation-belt survey before anything else; retrograde gravity capture to spare the reserve |
++| Wide-hot primary | Sirius, Procyon | big hot HZ at 2.6–5 AU; UV-hardened everything; Procyon's HZ is walking outward on megayear scales — buy real estate for the tenant you will become |
++| Old binary | 61 Cyg | two snow lines, a stirred comet halo (volatiles and strike hazard on one bill); 2,706-AU aim lead; resonance parking in the perturbation gaps |
++| No viable world at all | (possible) | pure orbital colony — the free-fort; the DESTINATION screen's honest answer is "none of these, take the belt" |
++
++### 5.9 Code hooks — what exists, what is proposed
++
++| Design element | Status | Hook |
++| --- | --- | --- |
++| Wave 1 courier | **live** | equipment `vlbi` (`survey: true`) → dossier layers, prognosis SURVEY DATA ±3 |
++| Wave 3 backbone | **live** | equipment `commsat`, `navbeacon`; SEED + refinery seed T2–T3 |
++| Transit attrition | **live** | `events.ts` — the shipshop / reserve-battery branches |
++| Corridor scout cluster | proposed | equipment ~15 t: measured ISM density → magsail-trim event variants, softer ISM event |
++| Flyby coaster cluster | proposed | equipment ~12 t: approach dossier layers on outer bodies |
++| Survey package (mapper / penetrator / volatiles orbiter) | proposed | equipment ~40 t: campaign-time dossier resolution, courier contradictions per 5.1 |
++| Cryobot melt probe | proposed | equipment ~10 t: ice-moon find (5.7) |
++| He-3 skim return | proposed | equipment ~40 t: T7 unlock |
++| L1 flare sentinel | proposed | equipment ~8 t: M-dwarf radiation easing (minutes-class warning) |
++| CAMPAIGN phase 0–15 yr | proposed | phase machine + command-watch aging state; drives the 5.7 reveal schedule |
++| DESTINATION screen | proposed | PLANET screen generalization: world / moon / orbit / belt targets |
++| Cohort split + ballots | proposed | crew screen allocation; endgame votes: gravity referendum, archive custody, the 48-kt question |
+ 
+ ---
+ 
+diff --git a/src/lib/mission/engine.ts b/src/lib/mission/engine.ts
+index bfb73dd..3c3c4f8 100644
+--- a/src/lib/mission/engine.ts
++++ b/src/lib/mission/engine.ts
+@@ -97,7 +97,7 @@ const KNOWN_WORLDS: Record<string, KnownWorld[]> = {
+       radiusKm: 10500,
+       designation: "e",
+       forceHZ: true,
+-      note: "Candidate super-Earth. If rocky, surface gravity ≈1.7 g.",
++      note: "Candidate super-Earth. If rocky, surface gravity ≈1.45 g — the well is deep.",
+     },
+     {
+       orbitAu: 1.334,
+-- 
+2.47.3
+
