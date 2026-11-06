@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { EQUIPMENT_BY_ID } from "@/lib/mission/equipment";
 import {
   BAYS,
@@ -27,10 +34,11 @@ import { cn } from "@/lib/utils";
 // shield, fusion drive. 204 berth dots stay individually countable.
 //
 // The camera has three presets — FULL SHIP / CARGO RING / CRYO BAYS — tweened
-// on the viewBox like pushing a magnifier across paper. A LOD layer (cell
-// stamps, per-bay telemetry, plumbing labels) fades in whenever the camera is
-// in close. The screen opens on the establish shot; the first loadout action
-// pushes in to the cargo ring, where the work is.
+// on the viewBox like pushing a magnifier across paper, and the sheet is a
+// free instrument: drag pans, the wheel zooms on the cursor, any station is
+// clickable. A LOD layer (cell stamps, per-bay telemetry, plumbing labels)
+// fades in whenever the camera is in close. The screen opens on the establish
+// shot; the first loadout action pushes in to the cargo ring, where the work is.
 
 // ── animated counter — mass readout ticks like a fuel gauge ──────────────────
 
@@ -56,7 +64,7 @@ export function useTickNumber(target: number, ms = 550) {
   return val;
 }
 
-// ── camera — three viewBox presets, tweened imperatively (no re-render) ──────
+// ── camera — presets tweened imperatively, plus free pan/zoom ────────────────
 
 export type BlueprintView = "full" | "cargo" | "bays";
 
@@ -74,48 +82,87 @@ const VIEW_BOX: Record<BlueprintView, VB> = {
   bays: [70, 29, 96.6, 34],
 };
 
-/** Tween the svg viewBox between presets (imperative — no re-render per frame). */
-function useBlueprintCamera(
-  svgRef: React.RefObject<SVGSVGElement | null>,
-  view: BlueprintView
-) {
+// free-camera limits — viewBox width in metres; height keeps the drawing's
+// 250:88 aspect so the sheet never skews
+const CAM_W_MIN = 26;
+const CAM_W_MAX = 260;
+const LOD_W = 205; // closer than this, the zoom-level detail layer is on
+
+function clampVB([x, y, w]: VB): VB {
+  const h = (w * 88) / 250;
+  return [
+    Math.min(Math.max(x, -14), 264 - w),
+    Math.min(Math.max(y, 4), 104 - h),
+    w,
+    h,
+  ];
+}
+
+function fmtVB(vb: VB): string {
+  return vb.map((n) => n.toFixed(2)).join(" ");
+}
+
+/** The blueprint camera. Presets tween the svg viewBox imperatively (no
+ *  re-render per frame); wheel zoom and drag pan write the same viewBox
+ *  directly. Returns whether the camera is currently "in close" (LOD). */
+function useBlueprintCamera(svgRef: React.RefObject<SVGSVGElement | null>) {
   const cur = useRef<VB>(VIEW_BOX.full);
-  useEffect(() => {
-    const el = svgRef.current;
-    const from = cur.current;
-    const to = VIEW_BOX[view];
-    const set = (vb: VB) => {
+  const raf = useRef(0);
+  const [zoomed, setZoomed] = useState(
+    VIEW_BOX.full[2] < LOD_W // false — the establish shot is wide
+  );
+
+  const stop = useCallback(() => cancelAnimationFrame(raf.current), []);
+
+  const set = useCallback(
+    (vb: VB) => {
       cur.current = vb;
-      el?.setAttribute("viewBox", vb.map((n) => n.toFixed(2)).join(" "));
-    };
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (
-      !el ||
-      reduce ||
-      (from[0] === to[0] && from[1] === to[1] && from[2] === to[2] && from[3] === to[3])
-    ) {
-      set(to);
-      return;
-    }
-    let raf = 0;
-    const t0 = performance.now();
-    const DUR = 950; // ms — instruments move slowly
-    const step = (t: number) => {
-      const k = Math.min(1, (t - t0) / DUR);
-      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      set([
-        from[0] + (to[0] - from[0]) * e,
-        from[1] + (to[1] - from[1]) * e,
-        from[2] + (to[2] - from[2]) * e,
-        from[3] + (to[3] - from[3]) * e,
-      ]);
-      if (k < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [view, svgRef]);
+      svgRef.current?.setAttribute("viewBox", fmtVB(vb));
+      const z = vb[2] < LOD_W;
+      setZoomed((prev) => (prev === z ? prev : z)); // re-render only on the flip
+    },
+    [svgRef]
+  );
+
+  const tweenTo = useCallback(
+    (to: VB, dur = 950) => {
+      stop();
+      const el = svgRef.current;
+      const from = cur.current;
+      const reduce =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (
+        !el ||
+        reduce ||
+        (from[0] === to[0] &&
+          from[1] === to[1] &&
+          from[2] === to[2] &&
+          from[3] === to[3])
+      ) {
+        set(to);
+        return;
+      }
+      const t0 = performance.now();
+      const step = (t: number) => {
+        const k = Math.min(1, (t - t0) / dur);
+        const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+        set([
+          from[0] + (to[0] - from[0]) * e,
+          from[1] + (to[1] - from[1]) * e,
+          from[2] + (to[2] - from[2]) * e,
+          from[3] + (to[3] - from[3]) * e,
+        ]);
+        if (k < 1) raf.current = requestAnimationFrame(step);
+      };
+      raf.current = requestAnimationFrame(step);
+    },
+    [set, stop, svgRef]
+  );
+
+  useEffect(() => stop, [stop]);
+
+  return { cur, set, tweenTo, zoomed };
 }
 
 // ── hull geometry (metres; nose datum x=5, centerline y=48) ──────────────────
@@ -173,7 +220,7 @@ const DOCK_ART: Record<string, { w: number; h: number }> = {
 };
 
 /** Station-data label for an equipment item's stowage address. */
-function stowLabel(id: string): string {
+export function stowLabel(id: string): string {
   const s = STOWAGE[id];
   if (!s) return "";
   if (s.kind === "bays") return `ALL ${BAY_COUNT} BAYS`;
@@ -334,26 +381,169 @@ function ModuleArt({ id }: { id: string }) {
 
 // ── the drawing ───────────────────────────────────────────────────────────────
 
-export function ShipBlueprint({
-  equipment,
-  onToggle,
-  hoverId,
-  onHover,
-  view,
-  onViewChange,
-}: {
+/** What the player just touched on the drawing. */
+export type StationClick =
+  | { kind: "dock"; id: string } // strongback dock — payload module position
+  | { kind: "cell"; id: string } // occupied rack cell / bus-B fit (equipment id)
+  | { kind: "rackEmpty" } // empty cargo-ring cell — open the rack picker
+  | { kind: "bay"; index: number } // cold-sleep bay 0–11 → its cohort
+  | { kind: "watch" }; // command sphere → the watch
+
+export interface ShipBlueprintHandle {
+  /** Tween the camera to a named preset. */
+  focusView(v: BlueprintView): void;
+  /** Tween the camera in close on an equipment item's stowage position. */
+  focusStation(id: string): void;
+}
+
+interface ShipBlueprintProps {
   equipment: string[];
-  onToggle: (id: string) => void;
+  onStationClick: (s: StationClick) => void;
   hoverId: string | null;
   onHover: (id: string | null) => void;
-  view: BlueprintView;
-  onViewChange: (v: BlueprintView) => void;
-}) {
+}
+
+/** viewBox centered close on an item's stowage position. */
+function stationVB(id: string): VB {
+  const s = STOWAGE[id];
+  if (!s) return VIEW_BOX.full;
+  if (s.kind === "bays") return VIEW_BOX.bays;
+  const W = 90;
+  const H = (W * 88) / 250;
+  if (s.kind === "dock") {
+    const art = DOCK_ART[id] ?? { w: 10, h: 8 };
+    const cx = s.sta + NOSE + art.w / 2;
+    const cy = s.side === "D" ? SPINE_TOP - art.h / 2 : SPINE_BOT + art.h / 2;
+    return clampVB([cx - W / 2, cy - H / 2, W, H]);
+  }
+  // rack cells — frame the whole run at reading distance
+  const first = s.cells[0];
+  const row = first.slice(0, 2) as RackRowId;
+  const x0 = RACK_X0 + (Number(first.slice(3)) - 1) * RACK.pitch;
+  const cx = x0 + (s.cells.length * RACK.pitch) / 2;
+  const cy = RACK_Y[row] + RACK.cellH / 2;
+  const w = Math.max(44, s.cells.length * RACK.pitch + 26);
+  return clampVB([cx - w / 2, cy - H / 2, w, (w * 88) / 250]);
+}
+
+export const ShipBlueprint = forwardRef<ShipBlueprintHandle, ShipBlueprintProps>(
+  function ShipBlueprint(
+    { equipment, onStationClick, hoverId, onHover },
+    ref
+  ) {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  useBlueprintCamera(svgRef, view);
-  // zoom-level detail fades in the same frame the camera starts pushing in
-  const zoomed = view !== "full";
+  const { cur, set, tweenTo, zoomed } = useBlueprintCamera(svgRef);
+  // last camera preset touched — buttons read active only while the camera
+  // still sits on their framing; free pan/zoom marks the camera custom
+  const [view, setView] = useState<BlueprintView>("full");
+  const [custom, setCustom] = useState(false);
   const [hoverBay, setHoverBay] = useState<number | null>(null);
+
+  // free pan / zoom — pointer drag with a click-vs-drag threshold, wheel zoom
+  // anchored at the cursor (native listener: React's onWheel is passive)
+  const drag = useRef<{
+    x: number;
+    y: number;
+    vb: VB;
+    moved: boolean;
+    id: number;
+    el: SVGSVGElement;
+  } | null>(null);
+  const suppressClick = useRef(false);
+
+  const userAt = (e: { clientX: number; clientY: number }) => {
+    const el = svgRef.current;
+    const vb = cur.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const scale = Math.min(rect.width / vb[2], rect.height / vb[3]); // meet
+    const ox = (rect.width - vb[2] * scale) / 2;
+    const oy = (rect.height - vb[3] * scale) / 2;
+    return {
+      x: vb[0] + (e.clientX - rect.left - ox) / scale,
+      y: vb[1] + (e.clientY - rect.top - oy) / scale,
+    };
+  };
+
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const u = userAt(e);
+      if (!u) return;
+      const vb = cur.current;
+      const f = Math.exp(e.deltaY * 0.0011);
+      const w = Math.min(CAM_W_MAX, Math.max(CAM_W_MIN, vb[2] * f));
+      const k = w / vb[2];
+      setCustom(true);
+      set(clampVB([u.x - (u.x - vb[0]) * k, u.y - (u.y - vb[1]) * k, w, (w * 88) / 250]));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [set]);
+
+  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.button !== 0) return;
+    suppressClick.current = false;
+    // no pointer capture yet — capture would retarget the click to the svg
+    // root and the stations would never see it; capture once it's a drag
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      vb: cur.current,
+      moved: false,
+      id: e.pointerId,
+      el: e.currentTarget,
+    };
+  };
+  const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.moved) {
+      if (Math.hypot(dx, dy) < 4) return;
+      d.moved = true;
+      d.el.setPointerCapture(d.id); // now it's a drag — take the pointer
+    }
+    const el = svgRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const scale = Math.min(rect.width / d.vb[2], rect.height / d.vb[3]);
+    setCustom(true);
+    set(clampVB([d.vb[0] - dx / scale, d.vb[1] - dy / scale, d.vb[2], d.vb[3]]));
+  };
+  const endDrag = () => {
+    if (drag.current?.moved) suppressClick.current = true;
+    drag.current = null;
+  };
+  /** true if this click should be swallowed (it ended a drag) */
+  const clickSuppressed = () => {
+    const s = suppressClick.current;
+    suppressClick.current = false;
+    return s;
+  };
+  const station = (s: StationClick) => {
+    if (clickSuppressed()) return;
+    onStationClick(s);
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focusView(v) {
+        setCustom(false);
+        setView(v);
+        tweenTo(VIEW_BOX[v]);
+      },
+      focusStation(id) {
+        setCustom(true);
+        tweenTo(stationVB(id));
+      },
+    }),
+    [tweenTo]
+  );
 
   const selected = new Set(equipment);
   const mass = equipment.reduce(
@@ -417,7 +607,7 @@ export function ShipBlueprint({
   }
 
   return (
-    <figure className="m-0">
+    <figure className="m-0 flex min-h-0 flex-1 flex-col">
       {/* status line + camera control */}
       <figcaption className="hal-mono mb-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b border-ink/10 px-1 pb-1.5 text-[10px] tracking-widest text-neutral-500">
         <span className="min-w-0 flex-1 truncate">{statusLeft}{statusRight && <> · {statusRight}</>}</span>
@@ -430,11 +620,15 @@ export function ShipBlueprint({
             <button
               key={v.id}
               type="button"
-              onClick={() => onViewChange(v.id)}
-              aria-pressed={view === v.id}
+              onClick={() => {
+                setCustom(false);
+                setView(v.id);
+                tweenTo(VIEW_BOX[v.id]);
+              }}
+              aria-pressed={!custom && view === v.id}
               className={cn(
                 "border px-1.5 py-0.5 text-[9px] tracking-[0.18em] transition-colors",
-                view === v.id
+                !custom && view === v.id
                   ? "border-phos/60 text-phos"
                   : "border-ink/15 text-neutral-500 hover:border-ink/40 hover:text-ink"
               )}
@@ -445,14 +639,18 @@ export function ShipBlueprint({
         </span>
       </figcaption>
 
-      <div className="aspect-[250/88] w-full min-h-[240px]">
+      <div className="relative min-h-0 flex-1">
         <svg
           ref={svgRef}
           viewBox="0 12 250 88"
-          className="h-full w-full"
+          className="h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
           role="img"
           aria-label={`General arrangement drawing of the seed ship Exodus, ${OVERALL_M} metres overall: Whipple debris shield forward, magsail drum, cargo ring, twelve distributed cold-sleep bays inside the debris shadow, deployable droplet-curtain radiators, aft fuel tanks and fusion drive, with docked payload modules`}
           preserveAspectRatio="xMidYMid meet"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
         >
           {/* ── debris shadow cone (under everything) ── */}
           <g opacity={0.4}>
@@ -482,7 +680,11 @@ export function ShipBlueprint({
           </g>
 
           {/* ── command sphere ── */}
-          <g>
+          <g
+            style={{ cursor: "pointer" }}
+            onClick={() => station({ kind: "watch" })}
+          >
+            <title>COMMAND SPHERE · 3 WATCH BERTHS — CLICK TO OPEN THE WATCH</title>
             <circle className="bp-hull" cx={14} cy={CL} r={6} />
             <g className="bp-detail">
               <rect className="bp-ink-dim" x={10} y={46.4} width={8} height={1.1} rx={0.55} />
@@ -521,7 +723,20 @@ export function ShipBlueprint({
                 const y = RACK_Y[row];
                 const owner = CELL_OWNER.get(addr);
                 if (!owner || !selected.has(owner)) {
-                  return <rect key={addr} className="bp-cell" x={x} y={y} width={RACK.cellW} height={RACK.cellH} />;
+                  return (
+                    <rect
+                      key={addr}
+                      className="bp-cell"
+                      x={x}
+                      y={y}
+                      width={RACK.cellW}
+                      height={RACK.cellH}
+                      style={{ cursor: "pointer", pointerEvents: "all" }}
+                      onClick={() => station({ kind: "rackEmpty" })}
+                    >
+                      <title>{`RACK ${addr} — EMPTY · CLICK TO STOW CARGO`}</title>
+                    </rect>
+                  );
                 }
                 const item = EQUIPMENT_BY_ID.get(owner);
                 const first = STOWAGE[owner]?.kind === "rack" && STOWAGE[owner].cells[0] === addr;
@@ -530,7 +745,7 @@ export function ShipBlueprint({
                     key={addr}
                     className={cn(hoverId === owner && "bp-hover")}
                     style={{ cursor: "pointer" }}
-                    onClick={() => onToggle(owner)}
+                    onClick={() => station({ kind: "cell", id: owner })}
                     onMouseEnter={() => onHover(owner)}
                     onMouseLeave={() => onHover(null)}
                   >
@@ -574,6 +789,8 @@ export function ShipBlueprint({
                 <g
                   key={b.id}
                   className={cn(hoverBay === i && "bp-hover")}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => station({ kind: "bay", index: i })}
                   onMouseEnter={() => setHoverBay(i)}
                   onMouseLeave={() => setHoverBay(null)}
                 >
@@ -624,7 +841,7 @@ export function ShipBlueprint({
               <g
                 className={cn(hoverId === "coldsleep" && "bp-hover")}
                 style={{ cursor: "pointer" }}
-                onClick={() => onToggle("coldsleep")}
+                onClick={() => station({ kind: "cell", id: "coldsleep" })}
                 onMouseEnter={() => onHover("coldsleep")}
                 onMouseLeave={() => onHover(null)}
               >
@@ -785,18 +1002,46 @@ export function ShipBlueprint({
 
           {/* ── payload modules at their strongback docks ── */}
           {Object.entries(STOWAGE).map(([id, s]) => {
-            if (s.kind !== "dock" || !selected.has(id)) return null;
+            if (s.kind !== "dock") return null;
             const item = EQUIPMENT_BY_ID.get(id);
             const art = DOCK_ART[id] ?? { w: 10, h: 8 };
             const dir = s.side === "D" ? -1 : 1;
             const base = s.side === "D" ? SPINE_TOP : SPINE_BOT;
+            if (!selected.has(id)) {
+              // empty strongback station — dashed footprint, waiting for its module
+              return (
+                <g
+                  key={id}
+                  transform={`translate(${s.sta + NOSE},${base}) scale(1,${dir})`}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => station({ kind: "dock", id })}
+                  onMouseEnter={() => onHover(id)}
+                  onMouseLeave={() => onHover(null)}
+                >
+                  <title>{`${item ? item.name : id} — EMPTY DOCK · CLICK TO STOW`}</title>
+                  <rect
+                    className="bp-ink-dim"
+                    x={0.5}
+                    y={0.5}
+                    width={art.w}
+                    height={art.h}
+                    strokeDasharray="0.9 0.7"
+                    style={{ pointerEvents: "all" }}
+                  />
+                  <path
+                    className="bp-ink-faint"
+                    d={`M1.5,0.5 v-0.9 M${art.w - 1.5},0.5 v-0.9`}
+                  />
+                </g>
+              );
+            }
             return (
               <g
                 key={id}
                 transform={`translate(${s.sta + NOSE},${base}) scale(1,${dir})`}
                 className={cn(hoverId === id && "bp-hover")}
-                style={{ cursor: item?.required ? "default" : "pointer" }}
-                onClick={() => onToggle(id)}
+                style={{ cursor: "pointer" }}
+                onClick={() => station({ kind: "dock", id })}
                 onMouseEnter={() => onHover(id)}
                 onMouseLeave={() => onHover(null)}
               >
@@ -874,7 +1119,12 @@ export function ShipBlueprint({
           </g>
 
           {/* ── zoom-level detail (fades in when the camera is in close) ── */}
-          <g className="bp-lod" style={{ opacity: zoomed ? 1 : 0 }} aria-hidden="true">
+          {/* pure annotation — never intercepts station clicks */}
+          <g
+            className="bp-lod"
+            style={{ opacity: zoomed ? 1 : 0, pointerEvents: "none" }}
+            aria-hidden="true"
+          >
             {/* rack stamps — occupied cells carry their cargo code + mass */}
             {RACK.rows.map((row) =>
               Array.from({ length: RACK.cellsPerRow }, (_, i) => {
@@ -937,9 +1187,9 @@ export function ShipBlueprint({
             <text className="bp-stamp-dim" x={176.5} y={38.4}>
               ×4 · 1,450 K · DROPLET
             </text>
-            {/* magsail drum */}
-            <path className="bp-ink-faint" d="M26.5,46.2 V43.6" />
-            <text className="bp-stamp-dim" x={26.5} y={42.9} textAnchor="middle">
+            {/* magsail drum — label hangs below, clear of the VLBI dock above */}
+            <path className="bp-ink-faint" d="M26.5,49.6 V51.2" />
+            <text className="bp-stamp-dim" x={26.5} y={52.4} textAnchor="middle">
               MAGSAIL — 1,900 KM LOOP
             </text>
             {/* fuel labels */}
@@ -1016,4 +1266,4 @@ export function ShipBlueprint({
       </div>
     </figure>
   );
-}
+});

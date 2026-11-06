@@ -53,9 +53,9 @@ export function MissionProfile({
   };
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[1fr_360px]">
+    <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_360px] lg:grid-rows-[minmax(0,1fr)]">
       {/* ── left: mission summary ── */}
-      <div className="space-y-3">
+      <div className="flex min-h-0 flex-col gap-3">
         <HudPanel title="Mission Profile" code="FINAL.01" accent="white" bodyClassName="p-0">
           <div className="grid gap-0 sm:grid-cols-2">
             <div className="border-b border-ink/10 p-4 sm:border-b-0 sm:border-r">
@@ -112,8 +112,13 @@ export function MissionProfile({
           </div>
         </HudPanel>
 
-        <HudPanel title="Payload Manifest" code="FINAL.02" bodyClassName="p-0">
-          <div className="hal-scroll max-h-56 overflow-y-auto">
+        <HudPanel
+          title="Payload Manifest"
+          code="FINAL.02"
+          className="flex min-h-0 flex-1 flex-col"
+          bodyClassName="flex min-h-0 flex-1 flex-col p-0"
+        >
+          <div className="hal-scroll min-h-0 flex-1 overflow-y-auto">
             {equipment.map((e) => (
               <div
                 key={e.id}
@@ -138,14 +143,15 @@ export function MissionProfile({
       </div>
 
       {/* ── right: prognosis ── */}
-      <div className="space-y-3">
+      <div className="flex min-h-0 flex-col gap-3">
         <HudPanel
           title="Colony Prognosis"
           code="SIM.4096"
           accent={prognosis.score >= 62 ? "phos" : prognosis.score >= 47 ? "amber" : "red"}
-          bodyClassName="p-0"
+          className="flex min-h-0 flex-col"
+          bodyClassName="flex min-h-0 flex-1 flex-col p-0"
         >
-          <div className="p-4">
+          <div className="hal-scroll min-h-0 flex-1 overflow-y-auto p-4">
             <div className="mb-4 flex items-end justify-between">
               <div>
                 <div className="hal-display glow-ink text-4xl leading-none text-ink">
@@ -209,9 +215,14 @@ export function MissionProfile({
         </HudPanel>
 
         {planet && (
-          <HudPanel title="Final Approach Render" code="VLBI.STILL" bodyClassName="p-0">
-            <div className="bg-black">
-              <PlanetScan planet={planet} blind={!hasProbe} />
+          <HudPanel
+            title="Final Approach Render"
+            code="VLBI.STILL"
+            className="flex min-h-32 flex-1 flex-col"
+            bodyClassName="flex min-h-0 flex-1 overflow-hidden p-0"
+          >
+            <div className="min-h-0 flex-1 bg-black">
+              <PlanetScan planet={planet} blind={!hasProbe} className="h-full w-full object-cover" />
             </div>
           </HudPanel>
         )}

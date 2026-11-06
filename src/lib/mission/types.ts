@@ -103,8 +103,7 @@ export type Phase =
   | "INTRO"
   | "BOOT"
   | "STAR"
-  | "EQUIP"
-  | "CREW"
+  | "MANIFEST"
   | "TRANSIT"
   | "PLANET"
   | "PROFILE";

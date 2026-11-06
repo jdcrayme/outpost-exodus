@@ -36,21 +36,14 @@ await shot("01-star-dossier");
 await btn("COMMIT DESTINATION");
 await page.waitForTimeout(1500);
 
-// EQUIP → toggle VLBI + science lander + shipshop, confirm
-for (const label of ["VLBI DEEP-SPACE", "SCIENCE LANDER", "SHIPBOARD REMANUFACTURING"]) {
-  await page.getByRole("button", { name: new RegExp(label, "i") }).first().click();
-  await page.waitForTimeout(400);
-}
+// MANIFEST → push the camera in, screenshot, commit (payload + crew together)
 await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForTimeout(800);
 await page.getByRole("button", { name: /FULL SHIP/i }).click();
 await page.waitForTimeout(1400); // camera tween
-await shot("02-equip-blueprint");
-await btn("CONFIRM PAYLOAD");
+await shot("02-manifest-blueprint");
+await btn("COMMIT MANIFEST");
 await page.waitForTimeout(1200);
-
-// CREW → proceed
-await btn("PROCEED TO TRANSIT");
 await page.waitForTimeout(9000); // let the draw-on complete and counter settle
 await page.evaluate(() => window.scrollTo(0, 0));
 await shot("03-transit-plate");

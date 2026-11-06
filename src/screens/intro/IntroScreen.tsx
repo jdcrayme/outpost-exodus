@@ -112,7 +112,7 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
 
       {/* prologue — one line at a time, centre screen */}
       {!logo && (
-        <div className="absolute inset-x-0 top-[38%] flex -translate-y-1/2 justify-center px-6">
+        <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-6">
           <div className="w-full max-w-2xl text-center">
             <div
               key={`c-${beat}`}

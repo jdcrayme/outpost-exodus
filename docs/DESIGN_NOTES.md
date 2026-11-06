@@ -608,3 +608,47 @@ never intersect the aft tanks/stages/labels in screen space (0 overlaps).
 Screenshots were reviewed by VLM for collisions — three real layout bugs
 were found and fixed this way (radiator stubs crossing the drop-stages,
 the intercept-inset label placements, the thermal-rejection label site).
+
+## 9. THE MANIFEST SCREEN — one instrument for payload and crew (implemented)
+
+### 9.1 The problem it answers
+
+EQUIP and CREW were the two worst scroll offenders (measured: +1,400–1,800 px
+and +3,800–4,200 px of document scroll at common viewports) because they
+rendered inherently spatial data — 2,160 t of cargo and 207 souls — as flat
+lists. The cockpit layout pass made `main` the scroll owner; this pass removes
+the need to scroll at all.
+
+### 9.2 The drawing is the interface
+
+The general-arrangement drawing becomes the single interactive surface:
+
+- the camera is a free instrument: drag pans, the wheel zooms anchored at the
+  cursor, the three presets (FULL SHIP / CARGO RING / CRYO BAYS) tween as
+  before; a ~4 px threshold separates clicks from drags (Starfield3D pattern);
+- every station is clickable: cargo-ring cells (empty cells open the stow
+  catalog), strongback docks (empty docks draw a dashed footprint), the
+  cold-sleep bays (each opens its cohort of seventeen), the command sphere
+  (the watch of three);
+- the stow catalog lists every unstowed item at its destination and is also
+  reachable from the launch manifest's ITEMS ▸ STOW footer — no item can be
+  missed for want of a 40-px hit target;
+- clicking a soul opens the dossier (the same CrewDossier, now in the popup);
+- the rail holds the mass budget, the launch manifest (rows focus their
+  station), the pre-flight check, and COMMIT MANIFEST.
+
+The mission sequence collapses to four steps — STAR → MANIFEST → SURVEY →
+LANDING — and the PhaseDial is redrawn for 90° spacing. `confirmPayload` and
+`proceedCrew` merge into `commitManifest`; the crew intro line
+(HALCYON_CREW_OPEN) now speaks the first time a bay is opened. Two dormant
+HALCYON lines are finally wired: `halcyonMassExcess` refuses an over-capacity
+stow, `HALCYON_NO_SEED` refuses clearing the SEED lander.
+
+### 9.3 Verified
+
+`npx tsc --noEmit` clean; `npm run build` clean; layout probe: document
+overflow 0 at every phase, MANIFEST main overflow 0 at 1920×1080, 1440×900
+and 1366×768; popups bounded (`max-h-[80dvh]`, internal scroll). Interaction
+walkthrough: stow/clear at cells and docks (both VLBI paths — dock ghost and
+catalog — verified: 260 → 380 → 260 T), capacity refusals, cohort →
+dossier → back, watch popup, commit into transit.

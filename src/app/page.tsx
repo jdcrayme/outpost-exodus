@@ -16,7 +16,6 @@ import {
   HALCYON_RESTART,
   halcyonStarCommitted,
   HALCYON_PAYLOAD_OK,
-  HALCYON_CREW_OPEN,
 } from "@/lib/mission/halcyon";
 import { CrtOverlay, TypeLine } from "@/components/common/TypeLine";
 import { PhaseDial } from "@/components/common/PhaseDial";
@@ -24,8 +23,7 @@ import { Waveform } from "@/components/common/Waveform";
 import { BootScreen } from "@/screens/boot/BootScreen";
 import { IntroScreen } from "@/screens/intro/IntroScreen";
 import { StarSelect } from "@/screens/star-select/StarSelect";
-import { EquipmentScreen } from "@/screens/equipment/EquipmentScreen";
-import { CrewScreen } from "@/screens/crew/CrewScreen";
+import { ManifestScreen } from "@/screens/manifest/ManifestScreen";
 import { TransitScreen } from "@/screens/transit/TransitScreen";
 import { PlanetSelect } from "@/screens/planet-select/PlanetSelect";
 import { MissionProfile } from "@/screens/profile/MissionProfile";
@@ -33,10 +31,9 @@ import { cn } from "@/lib/utils";
 
 const PHASE_STEPS: { id: Phase; label: string; code: string }[] = [
   { id: "STAR", label: "STAR SELECT", code: "01" },
-  { id: "EQUIP", label: "PAYLOAD", code: "02" },
-  { id: "CREW", label: "CREW", code: "03" },
-  { id: "TRANSIT", label: "SURVEY", code: "04" },
-  { id: "PLANET", label: "LANDING", code: "05" },
+  { id: "MANIFEST", label: "MANIFEST", code: "02" },
+  { id: "TRANSIT", label: "SURVEY", code: "03" },
+  { id: "PLANET", label: "LANDING", code: "04" },
 ];
 
 const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
@@ -46,13 +43,9 @@ const PHASE_HEADER: Record<Phase, { title: string; sub: string } | null> = {
     title: "DESTINATION — STAR SELECT",
     sub: "Choose the system that will inherit the human race. Drag the chart; consult the dossier.",
   },
-  EQUIP: {
-    title: "SHIP EQUIPMENT — PAYLOAD MANIFEST",
-    sub: "Containerized cargo stows in the forward cargo ring; landers dock along the strongback — the drawing zooms with the work. 1,760 tonnes of launch capacity against a 2,160-tonne catalog.",
-  },
-  CREW: {
-    title: "CREW MANIFEST — COLD-SLEEP ROSTER",
-    sub: "207 souls: a watch of three in the command sphere, and twelve cohorts of seventeen along the spine — one cohort to a bay, every cohort carrying the whole civilization, so no single catastrophe reaches a second. HALCYON holds the transit watch.",
+  MANIFEST: {
+    title: "SHIP MANIFEST — PAYLOAD & CREW",
+    sub: "1,760 tonnes of launch capacity against a 2,160-tonne catalog. Click the drawing: stow containers and landers at their stations, open any cold-sleep bay for its cohort of seventeen. 207 souls ride the spine — every configuration is a sacrifice.",
   },
   TRANSIT: { title: "TRANSIT & SURVEY", sub: "" },
   PLANET: {
@@ -145,7 +138,7 @@ export default function OutpostPage() {
     if (!s) return;
     setStarId(id);
     setPlanetId(null);
-    setPhase("EQUIP");
+    setPhase("MANIFEST");
     setHalLine(HALCYON_EQUIP_OPEN);
     addLog(`DESTINATION COMMITTED — ${s.name} (${s.distanceLy.toFixed(2)} LY)`);
     addLog(
@@ -160,19 +153,16 @@ export default function OutpostPage() {
     );
   };
 
-  const confirmPayload = () => {
-    setPhase("CREW");
+  // payload and crew commit together — the manifest is one instrument now
+  const commitManifest = () => {
+    setPhase("TRANSIT");
     addLog(
       `PAYLOAD CONFIRMED — ${equipmentItems.length} ITEMS / ${equipmentItems.reduce((a, e) => a + e.massT, 0)} T`
     );
     addLog(`DEPARTURE PROFILE — TJI Δv ${TRANSFER.dvTjiKms.toFixed(2)} KM/S · JOVIAN δ ${TRANSFER.deltaDeg.toFixed(1)}° · TORCH ${BURN_YEARS.toFixed(1)} YR → 0.100 C`);
-    addLog(HALCYON_PAYLOAD_OK);
-    setHalLine(HALCYON_CREW_OPEN);
-  };
-
-  const proceedCrew = () => {
-    setPhase("TRANSIT");
     addLog("CREW ROSTER VERIFIED — 207 SOULS · 12/12 COHORTS COMPLETE");
+    addLog(HALCYON_PAYLOAD_OK);
+    setHalLine(HALCYON_PAYLOAD_OK);
   };
 
   const finishTransit = () => {
@@ -210,7 +200,7 @@ export default function OutpostPage() {
   );
 
   return (
-    <div className="hal-mono relative flex min-h-screen flex-col bg-[#030304] text-neutral-200">
+    <div className="hal-mono relative flex h-dvh flex-col overflow-hidden bg-[#030304] text-neutral-200">
       {/* engineering graph paper underlay */}
       <div className="grid-paper pointer-events-none fixed inset-0" aria-hidden="true" />
       <CrtOverlay />
@@ -322,7 +312,7 @@ export default function OutpostPage() {
                 {header.sub}
               </p>
             </div>
-            {phase === "EQUIP" && (
+            {phase === "MANIFEST" && (
               <button
                 onClick={() => {
                   setPhase("STAR");
@@ -333,37 +323,24 @@ export default function OutpostPage() {
                 ◂ REVISE DESTINATION
               </button>
             )}
-            {phase === "CREW" && (
-              <button
-                onClick={() => {
-                  setPhase("EQUIP");
-                  halcyonAudio.select();
-                }}
-                className="border border-ink/15 px-3 py-1.5 text-[9px] tracking-[0.25em] text-neutral-500 hover:border-ink/40 hover:text-ink"
-              >
-                ◂ REVISE PAYLOAD
-              </button>
-            )}
           </div>
         </div>
       )}
 
-      {/* ── main ── */}
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-3 py-3 sm:py-4">
+      {/* ── main — the scroll owner: long phases (blueprint, roster) scroll here
+          while the status bars stay docked; fitting phases fill it exactly ── */}
+      <main className="hal-scroll mx-auto flex w-full max-w-[1600px] min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3 sm:py-4">
         {phase === "BOOT" && <BootScreen onInitiate={initiate} />}
         {phase === "STAR" && (
           <StarSelect onCommit={commitStar} onSpeak={speak} />
         )}
-        {phase === "EQUIP" && (
-          <EquipmentScreen
+        {phase === "MANIFEST" && (
+          <ManifestScreen
             equipment={equipment}
             onToggle={toggleEquipment}
-            onConfirm={confirmPayload}
+            onConfirm={commitManifest}
             onSpeak={speak}
           />
-        )}
-        {phase === "CREW" && (
-          <CrewScreen equipment={equipment} onConfirm={proceedCrew} />
         )}
         {phase === "TRANSIT" && star && (
           <TransitScreen

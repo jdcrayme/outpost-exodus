@@ -161,7 +161,7 @@ export function TransitScreen({
   const fMag = ((pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS) / totalYears) * 100;
 
   return (
-    <div className="relative mx-auto flex min-h-[calc(100vh-8.5rem)] max-w-5xl flex-col items-center justify-center px-4 py-8">
+    <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-4 py-8">
       <button
         onClick={skip}
         className="hal-mono absolute right-4 top-0 border border-ink/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-ink/50 hover:text-ink"

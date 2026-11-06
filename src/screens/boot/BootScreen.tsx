@@ -40,7 +40,7 @@ export function BootScreen({ onInitiate }: { onInitiate: () => void }) {
   };
 
   return (
-    <div className="relative flex min-h-[calc(100vh-8.5rem)] items-center justify-center px-4 py-8">
+    <div className="relative flex flex-1 items-center justify-center px-4 py-8">
       <button
         onClick={skip}
         className="hal-mono absolute right-4 top-0 border border-ink/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-ink/50 hover:text-ink"

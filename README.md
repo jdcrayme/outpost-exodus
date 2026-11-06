@@ -53,22 +53,24 @@ then `vercel --prod` when you're happy with the preview.
 
 The app is a single state machine, owned by `src/app/page.tsx`:
 
-`INTRO → BOOT → STAR → EQUIP → CREW → TRANSIT → PLANET → PROFILE`
+`INTRO → BOOT → STAR → MANIFEST → TRANSIT → PLANET → PROFILE`
 
 0. **INTRO** — title card: the 2096–2098 impact prologue fades in over a drifting
    starfield, then the OUTPOST // EXODUS logo blooms in — skippable
 1. **BOOT** — cold-start diagnostics: the boot log scrolls in, then rolls up as the
    9000's neural pattern stabilizes on a scope and the initiate button appears
 2. **STAR** — destination star select from the catalog
-3. **EQUIP** — seed-ship payload manifest with mass/power budget
-4. **CREW** — cold-sleep roster: 207 souls in twelve bays, every cohort
-   carrying all eight civilizational functions; procedural mustered photos
-   (48 px dossier plates, 16 px roster thumbnails — the member seed read as
-   a face, the Elite homage)
-5. **TRANSIT** — transit plot: conic transfer arc, Kepler-solved ship marker, live
+3. **MANIFEST** — payload and crew on one instrument: the general-arrangement
+   drawing is the interface — drag pans, the wheel zooms, every station is
+   clickable. Stow containers and landers at cargo-ring cells and strongback
+   docks against the 1,760-tonne capacity; click a cold-sleep bay for its
+   cohort of seventeen (procedural mustered photos — 48 px dossier plates,
+   16 px roster thumbnails — the member seed read as a face, the Elite
+   homage), or the command sphere for the watch of three
+4. **TRANSIT** — transit plot: conic transfer arc, Kepler-solved ship marker, live
    vis-viva equation (typeset with KaTeX) and streaming telemetry
-6. **PLANET** — VLBI probe planet survey; choose a landing site
-7. **PROFILE** — final mission profile; HAL signs off with his waveform
+5. **PLANET** — VLBI probe planet survey; choose a landing site
+6. **PROFILE** — final mission profile; HAL signs off with his waveform
 
 ## Project layout
 
@@ -80,17 +82,16 @@ src/
                         #                     logo + drifting starfield (skippable)
                         #   boot/           — cold-start diagnostics
                         #   star-select/    — StarSelect + Starfield3D (3D local neighborhood)
-                        #   equipment/      — EquipmentScreen + ShipBlueprint
-                        #                     (general-arrangement loadout drawing:
-                        #                     Whipple shield, cargo ring, 12
-                        #                     distributed cold-sleep bays,
-                        #                     radiators, aft fuel; 3 camera
-                        #                     presets, 207 berth dots,
+                        #   manifest/       — ManifestScreen + ShipBlueprint
+                        #                     (the GA drawing as the interface:
+                        #                     free pan/zoom camera, clickable
+                        #                     cargo cells, strongback docks,
+                        #                     cryo bays, command sphere;
+                        #                     Whipple shield, 207 berth dots,
                         #                     true-scale human, title block)
-                        #   crew/          — CrewScreen + BayChain (cold-sleep
-                        #                     chain navigator) + CrewDossier +
-                        #                     Portrait (procedural mustered
-                        #                     photos: member seed → 48 px plate
+                        #                     + CrewDossier + Portrait
+                        #                     (procedural mustered photos:
+                        #                     member seed → 48 px plate
                         #                     / 16 px thumbnail)
                         #   transit/        — TransitScreen + TransitPlot
                         #                     (Kepler-solved arc, live vis-viva plate)
