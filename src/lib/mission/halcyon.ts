@@ -86,6 +86,10 @@ export const HALCYON_JOVIAN_LINE = `Jupiter has bent our course ${TRANSFER.delta
 
 export const HALCYON_MAGSAIL_LINE = `The magsail is away, Commander. Nineteen hundred kilometres of superconducting cable, blooming in the dark ahead of us — ${MAG_DEPLOY_LY.toFixed(2)} light-years out. We will lean on the interstellar medium itself for the long, slow fall.`;
 
+export function halcyonApproach(star: StarSystem): string {
+  return `The sail has given us everything it has, Commander. Watch the chart — ${star.name} is about to stop being a point of light and become a place.`;
+}
+
 export const HALCYON_KINETIC_LINE =
   "Our kinetic energy at cruise is thirty times the 2098 impactor, Commander. I try not to dwell on it.";
 

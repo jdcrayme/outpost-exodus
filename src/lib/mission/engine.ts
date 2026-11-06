@@ -571,3 +571,22 @@ export function formatClock(elapsedS: number): string {
   const s = Math.floor(elapsedS % 60);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+
+// ─── Intended parking orbit — where HALCYON aims the capture ────────────────
+// With the VLBI probe aboard, the intent is the best landable world the survey
+// resolved; blind, it is the heaviest body gravimetrics can see. Either way
+// the Commander refines the choice on the system chart — the deceleration arc
+// is re-plotted the moment they do.
+
+export function intendedParkingWorld(
+  planets: Planet[],
+  hasProbe: boolean
+): Planet | null {
+  if (planets.length === 0) return null;
+  if (hasProbe) {
+    const landable = planets.filter((p) => p.landable);
+    const pool = landable.length > 0 ? landable : planets;
+    return pool.reduce((a, b) => (b.suitability > a.suitability ? b : a));
+  }
+  return planets.reduce((a, b) => (b.massEarth > a.massEarth ? b : a));
+}

@@ -4,16 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Planet, StarSystem } from "@/lib/mission/types";
 import { transitYears } from "@/lib/mission/stars";
-import {
-  missionState,
-  fmtLightTime,
-  phaseBoundaries,
-  MAG_YEARS,
-  CAPTURE_YEARS,
-} from "@/lib/mission/astro";
 import { transitEvents } from "@/lib/mission/events";
 import { Lissajous } from "@/components/common/Lissajous";
-import { HudButton } from "@/components/common/HudPanel";
 import { halcyonAudio } from "@/lib/mission/audio";
 import {
   HALCYON_ARRIVAL,
@@ -22,14 +14,18 @@ import {
   HALCYON_KINETIC_LINE,
   HALCYON_MAGSAIL_LINE,
   HALCYON_SURVEY_DONE,
+  halcyonApproach,
   halcyonTransit,
 } from "@/lib/mission/halcyon";
-import { cn } from "@/lib/utils";
 
 // KaTeX + plate ship with the transit bundle, not the initial payload
 const TransitPlot = dynamic(() => import("./TransitPlot"), { ssr: false });
 
-// ─── Phase 3 — probe launch, decades of transit, arrival survey ─────────────
+// ─── Phase 3 — probe separation, then one continuous transit plate ───────────
+// The plot owns the clock: departure, cruise, the magsail's long fall, the
+// VLBI relay printing its findings as the light catches up, and the camera
+// zoom down the range ladder into the destination system — no cuts. This
+// screen is just the shell: separation card, HALCYON's lines, and the exit.
 
 export function TransitScreen({
   star,
@@ -50,9 +46,7 @@ export function TransitScreen({
 }) {
   const totalYears = transitYears(star);
   const events = useMemo(() => transitEvents(star, equipment), [star, equipment]);
-  const [step, setStep] = useState(0); // 0 sep, 1 transit, 2 arrival, 3 survey, 4 complete
-  const [years, setYears] = useState(0);
-  const [signals, setSignals] = useState(0);
+  const [step, setStep] = useState(0); // 0 separation, 1 transit plate, 2 gone
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const doneRef = useRef(false);
 
@@ -69,83 +63,32 @@ export function TransitScreen({
           : "No survey probe aboard. I hope you know something about this system that I do not, Commander."
       );
     });
-    at(3400, () => setStep(1));
-    at(3800, () => onSpeak(halcyonTransit(star, Math.round(totalYears))));
-    at(6300, () => onSpeak(HALCYON_JOVIAN_LINE));
-    at(8600, () => onSpeak(HALCYON_KINETIC_LINE));
-    at(10800, () => {
-      // one mid-transit event, spoken — the decades are not kind
-      const spoken = events.find((e) => e.speech);
-      if (spoken?.speech) onSpeak(spoken.speech);
-    });
-    at(13200, () => onSpeak(HALCYON_MAGSAIL_LINE));
-
-    // step 1 — transit counting (8 s of screen time = decades)
-    at(15400, () => {
-      setStep(2);
-      halcyonAudio.ping();
-      onSpeak(HALCYON_ARRIVAL);
-    });
-
-    // step 2 — arrival
-    at(19000, () => setStep(3));
-
-    // step 3 — survey signals
-    if (hasProbe) {
-      planets.forEach((_, i) => {
-        at(19600 + i * 850, () => {
-          setSignals(i + 1);
-          halcyonAudio.ping();
-        });
-      });
-      at(19600 + planets.length * 850 + 900, () => {
-        setStep(4);
-        halcyonAudio.confirm();
-        onSpeak(HALCYON_SURVEY_DONE);
-      });
-      at(20500 + planets.length * 850 + 2400, () => {
-        if (!doneRef.current) {
-          doneRef.current = true;
-          onDone();
-        }
-      });
-    } else {
-      at(20200, () => {
-        halcyonAudio.scan();
-        setSignals(planets.length);
-      });
-      at(23000, () => {
-        setStep(4);
-        onSpeak(HALCYON_BLIND_SURVEY);
-      });
-      at(26000, () => {
-        if (!doneRef.current) {
-          doneRef.current = true;
-          onDone();
-        }
-      });
-    }
+    at(2900, () => onSpeak(halcyonTransit(star, Math.round(totalYears))));
+    at(3200, () => setStep(1));
 
     timers.current = all;
     return () => all.forEach(clearTimeout);
   }, []);
 
-  // year counter during transit
+  // cruise chatter, once the plate is up
   useEffect(() => {
     if (step !== 1) return;
-    const t0 = performance.now();
-    let raf = 0;
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / 11000);
-      setYears(p * totalYears);
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [step, totalYears]);
+    const all: ReturnType<typeof setTimeout>[] = [];
+    const at = (ms: number, fn: () => void) => all.push(setTimeout(fn, ms));
 
-  const skip = () => {
-    (timers.current as ReturnType<typeof setTimeout>[]).forEach(clearTimeout);
+    at(2600, () => onSpeak(HALCYON_JOVIAN_LINE));
+    at(5600, () => onSpeak(HALCYON_KINETIC_LINE));
+    at(7800, () => {
+      // one mid-transit event, spoken — the decades are not kind
+      const spoken = events.find((e) => e.speech);
+      if (spoken?.speech) onSpeak(spoken.speech);
+    });
+
+    timers.current.push(...all);
+    return () => all.forEach(clearTimeout);
+  }, [step]);
+
+  const finish = () => {
     if (!doneRef.current) {
       doneRef.current = true;
       halcyonAudio.confirm();
@@ -153,179 +96,61 @@ export function TransitScreen({
     }
   };
 
-  const st = missionState(star.distanceLy, years);
-  const remainingLy = st.remainingLy;
-  const landable = planets.filter((p) => p.landable).length;
-  const pb = phaseBoundaries(star.distanceLy);
-  const fBurn = (pb.tBurnEnd / totalYears) * 100;
-  const fMag = ((pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS) / totalYears) * 100;
+  const skip = () => {
+    timers.current.forEach(clearTimeout);
+    setStep(2); // unmounts the plate — its clock cleans up after itself
+    finish();
+  };
 
   return (
-    <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-4 py-8">
+    <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-3 pb-4 pt-10">
       <button
         onClick={skip}
-        className="hal-mono absolute right-4 top-0 border border-ink/20 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-ink/50 hover:text-ink"
+        className="hal-mono absolute right-4 top-3 border border-ink/20 bg-black/60 px-3 py-1.5 text-[10px] tracking-[0.25em] text-neutral-500 hover:border-ink/50 hover:text-ink"
         aria-label="Skip transit"
       >
         SKIP ▸
       </button>
 
-      <div className="w-full space-y-8">
-        {/* ── separation ── */}
-        {step === 0 && (
-          <div className="fade-up flex flex-col items-center gap-6 text-center">
-            <Lissajous
-              size={148}
-              a={2}
-              b={3}
-              label={hasProbe ? "COURIER TELEMETRY — LINK NOMINAL" : "TELEMETRY — LINK LIMITED"}
-            />
-            <div className="hal-display text-xl tracking-[0.3em] text-ink sm:text-2xl">
-              {hasProbe ? "VLBI PROBE SEPARATION" : "FINAL MANIFEST REVIEW"}
-            </div>
-            <div className="hal-mono text-xs text-neutral-400">
-              {hasProbe
-                ? "COURIER STAGE AWAY — BURN 0.135 C — TELEMETRY LINK NOMINAL"
-                : "NO SURVEY PROBE ABOARD — TELEMETRY WILL BE LIMITED"}
-            </div>
+      {/* ── separation ── */}
+      {step === 0 && (
+        <div className="fade-up flex flex-col items-center gap-6 text-center">
+          <Lissajous
+            size={148}
+            a={2}
+            b={3}
+            label={hasProbe ? "COURIER TELEMETRY — LINK NOMINAL" : "TELEMETRY — LINK LIMITED"}
+          />
+          <div className="hal-display text-xl tracking-[0.3em] text-ink sm:text-2xl">
+            {hasProbe ? "VLBI PROBE SEPARATION" : "FINAL MANIFEST REVIEW"}
           </div>
-        )}
-
-        {/* ── transit ── */}
-        {step >= 1 && step < 3 && (
-          <div className="fade-up space-y-4 sm:space-y-5">
-            <div className="text-center">
-              <div className="hal-display text-lg tracking-[0.3em] text-ink sm:text-2xl">
-                INTERSTELLAR TRANSIT
-              </div>
-              <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-neutral-400">
-                DESTINATION {star.name} · JOVIAN DEPARTURE · CRUISE 0.100 C · MAGSAIL BRAKE {Math.round(totalYears - MAG_YEARS - CAPTURE_YEARS + 2098.274)}
-              </div>
-            </div>
-
-            <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 border border-ink/10 bg-black/40 p-3 text-center sm:grid-cols-4 sm:p-4">
-              <div>
-                <div className="hal-display glow-phos text-xl text-phos sm:text-2xl">
-                  {years.toFixed(1)}
-                </div>
-                <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
-                  YEARS ELAPSED
-                </div>
-              </div>
-              <div>
-                <div className="hal-display text-xl text-ink sm:text-2xl">
-                  {remainingLy.toFixed(2)}
-                </div>
-                <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
-                  LY REMAINING
-                </div>
-              </div>
-              <div>
-                <div className="hal-display text-xl text-ink sm:text-2xl">
-                  {fmtLightTime(st.rangeAu)}
-                </div>
-                <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
-                  LIGHT-TIME TO SOL
-                </div>
-              </div>
-              <div>
-                <div className="hal-display text-xl text-ink sm:text-2xl">
-                  207
-                </div>
-                <div className="hal-mono mt-1 text-[9px] tracking-widest text-neutral-500">
-                  CREW · TORPOR
-                </div>
-              </div>
-            </div>
-
-            <TransitPlot star={star} payloadMassT={payloadMassT} years={years} />
-
-            <div className="mx-auto max-w-4xl">
-              <div className="relative h-2 border border-ink/15 bg-ink/5">
-                <div
-                  className="h-full bg-ink/85 transition-[width] duration-100"
-                  style={{ width: `${(years / totalYears) * 100}%` }}
-                />
-                {/* phase ticks — torch out, magsail deploy */}
-                <div className="pointer-events-none absolute inset-0">
-                  {[fBurn, fMag].map((f) => (
-                    <div
-                      key={f}
-                      className="absolute top-[-3px] h-[14px] w-px bg-amber-400/50"
-                      style={{ left: `${f}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="hal-mono mt-1.5 flex justify-between text-[9px] tracking-widest text-neutral-600">
-                <span>TJI BURN 2098.274</span>
-                <span className="hidden sm:inline text-amber-400/60">
-                  TORCH OUT {Math.round(2098.274 + pb.tBurnEnd)}
-                </span>
-                <span className="hidden sm:inline text-amber-400/60">
-                  MAGSAIL DEPLOY {Math.round(2098.274 + pb.tMagEnd + CAPTURE_YEARS - MAG_YEARS)}
-                </span>
-                <span>ARRIVAL {Math.round(2098.274 + totalYears)}</span>
-              </div>
-            </div>
+          <div className="hal-mono text-xs text-neutral-400">
+            {hasProbe
+              ? "COURIER STAGE AWAY — BURN 0.135 C — TELEMETRY LINK NOMINAL"
+              : "NO SURVEY PROBE ABOARD — TELEMETRY WILL BE LIMITED"}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── arrival + survey ── */}
-        {step >= 3 && (
-          <div className="fade-up space-y-6">
-            <div className="text-center">
-              <div className="hal-display text-xl tracking-[0.3em] text-ink sm:text-2xl">
-                {hasProbe ? "VLBI SURVEY RELAY" : "PASSIVE GRAVIMETRIC SCAN"}
-              </div>
-              <div className="hal-mono mt-2 text-[10px] tracking-[0.4em] text-neutral-400">
-                SYSTEM ENTRY — {star.name} — {new Date().getFullYear() + Math.round(totalYears) - 2026 + 2098} SHIP CALENDAR
-              </div>
-            </div>
-
-            <div className="mx-auto grid max-w-3xl grid-cols-2 gap-2 sm:grid-cols-3">
-              {planets.map((p, i) => {
-                const found = i < signals;
-                return (
-                  <div
-                    key={p.id}
-                    className={cn(
-                      "hal-mono border px-3 py-3 text-center transition-all duration-500",
-                      found
-                        ? "border-phos/60 bg-phos/10 opacity-100"
-                        : "border-ink/10 opacity-30"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "text-xs tracking-widest",
-                        found ? "text-phos" : "text-neutral-600"
-                      )}
-                    >
-                      {found ? p.designation : "——"}
-                    </div>
-                    <div className="mt-1 text-[9px] text-neutral-500">
-                      {found
-                        ? `${p.massEarth.toFixed(1)} M⊕ · ${p.orbitAu.toFixed(2)} AU`
-                        : "ACQUIRING…"}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {step >= 4 && (
-              <div className="fade-in text-center">
-                <div className="hal-mono glow-phos text-xs text-phos">
-                  {hasProbe
-                    ? `SURVEY COMPLETE — ${planets.length} WORLDS · ${landable} LANDABLE`
-                    : "MASS DETECTION ONLY — SURFACE CONDITIONS UNKNOWN"}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* ── the transit — one plate, one camera ── */}
+      {step === 1 && (
+        <div className="fade-up flex h-full min-h-0 w-full flex-1 flex-col">
+          <TransitPlot
+            star={star}
+            planets={planets}
+            hasProbe={hasProbe}
+            payloadMassT={payloadMassT}
+            onPrint={() => halcyonAudio.ping()}
+            onMagsail={() => onSpeak(HALCYON_MAGSAIL_LINE)}
+            onApproach={() => onSpeak(halcyonApproach(star))}
+            onArrival={() => onSpeak(HALCYON_ARRIVAL)}
+            onSurveyDone={() =>
+              onSpeak(hasProbe ? HALCYON_SURVEY_DONE : HALCYON_BLIND_SURVEY)
+            }
+            onDone={finish}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Planet, StarSystem } from "@/lib/mission/types";
 import { HudPanel, DataRow, HudButton, Gauge } from "@/components/common/HudPanel";
 import { OrbitMap } from "./OrbitMap";
 import { PlanetScan } from "@/components/common/PlanetScan";
 import { halcyonAudio } from "@/lib/mission/audio";
 import { halcyonPlanetSelected } from "@/lib/mission/halcyon";
+import { intendedParkingWorld } from "@/lib/mission/engine";
 import { cn } from "@/lib/utils";
 
 const KIND_LABEL: Record<Planet["kind"], string> = {
@@ -52,6 +53,13 @@ export function PlanetSelect({
   const [selected, setSelected] = useState<string | null>(null);
   const planet = planets.find((p) => p.id === selected) ?? null;
 
+  // HALCYON's intended parking orbit — the chart plots the deceleration arc
+  // to it on entry, then re-plots to whatever world the Commander selects.
+  const parking = useMemo(
+    () => intendedParkingWorld(planets, hasProbe),
+    [planets, hasProbe]
+  );
+
   const pick = (id: string) => {
     setSelected(id);
     const p = planets.find((x) => x.id === id);
@@ -76,6 +84,7 @@ export function PlanetSelect({
               planets={planets}
               selectedId={selected}
               onSelect={pick}
+              parkingOrbitAu={parking?.orbitAu ?? null}
             />
           </div>
         </HudPanel>

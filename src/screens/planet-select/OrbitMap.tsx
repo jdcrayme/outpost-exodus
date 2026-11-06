@@ -5,27 +5,39 @@ import type { Planet, StarSystem } from "@/lib/mission/types";
 import { hashString, mulberry32 } from "@/lib/mission/engine";
 
 // ─── System orbital chart — star, orbits, animated planets, HZ band ─────────
+// The ship's arrival is part of the chart: the deceleration arc is plotted
+// from the Sol direction into the parking orbit. It targets the intended
+// parking orbit on entry, then re-plots — gliding, not cutting — to
+// whichever world the Commander selects.
 
 export function OrbitMap({
   star,
   planets,
   selectedId,
   onSelect,
+  parkingOrbitAu,
   className,
 }: {
   star: StarSystem;
   planets: Planet[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Orbit radius of HALCYON's intended parking target, AU — used until the
+   *  Commander selects a world. */
+  parkingOrbitAu?: number | null;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const selRef = useRef(selectedId);
   const planetsRef = useRef(planets);
+  const parkingRef = useRef(parkingOrbitAu ?? null);
+  const onSelectRef = useRef(onSelect);
   useEffect(() => {
     selRef.current = selectedId;
     planetsRef.current = planets;
-  }, [selectedId, planets]);
+    parkingRef.current = parkingOrbitAu ?? null;
+    onSelectRef.current = onSelect;
+  }, [selectedId, planets, parkingOrbitAu, onSelect]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -69,6 +81,13 @@ export function OrbitMap({
     const mapR = (au: number) => Math.pow(au / rMax, 0.55);
 
     let projected: { id: string; x: number; y: number }[] = [];
+
+    // ── arrival arc state — glide-replots as the parking target changes ──
+    let arcR = -1; // current target ring radius, px
+    let arcAlpha = 0;
+    let arcBornAt = -1;
+    const smoothS = (s: number) => s * s * (3 - 2 * s);
+    const clamp01 = (s: number) => Math.max(0, Math.min(1, s));
 
     const draw = (t: number) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -209,6 +228,113 @@ export function OrbitMap({
         height - 10
       );
 
+      // ── deceleration arc — from Sol, wrapping into the parking orbit ──
+      const sel = planetsRef.current.find(
+        (p) => p.id === selRef.current
+      );
+      const selAu = sel ? sel.orbitAu : parkingRef.current;
+      if (selAu != null) {
+        const targetR = mapR(selAu) * R;
+        if (arcR < 0) arcR = targetR; // snap on first sight, glide after
+        arcR += (targetR - arcR) * 0.07;
+        arcAlpha = Math.min(1, arcAlpha + 0.035);
+        if (arcBornAt < 0) arcBornAt = t;
+        const reveal = smoothS(clamp01((t - arcBornAt) / 1600));
+
+        // the intended parking orbit, emphasized — the arc lands on it
+        ctx.save();
+        ctx.setLineDash([7, 4]);
+        ctx.strokeStyle = `rgba(232,230,220,${0.6 * arcAlpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, arcR, arcR * flatten, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        const ARC_N = 84;
+        const SWEEP = 5.25;
+        const enter = Math.PI * 0.98; // from the Sol direction, screen left
+        ctx.beginPath();
+        let endX = cx;
+        let endY = cy;
+        let capX = cx;
+        let capY = cy;
+        for (let i = 0; i <= ARC_N; i++) {
+          const a = (i / ARC_N) * reveal;
+          const rr = (R + 60) + (arcR - (R + 60)) * smoothS(a);
+          const ang = enter - a * SWEEP;
+          const x = cx + Math.cos(ang) * rr;
+          const y = cy + Math.sin(ang) * rr * flatten;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          if (i === Math.floor(ARC_N * 0.86)) {
+            capX = x;
+            capY = y;
+          }
+          endX = x;
+          endY = y;
+        }
+        ctx.strokeStyle = `rgba(232,230,220,${0.75 * arcAlpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // leading dot rides the arc while it draws
+        if (reveal > 0.02 && reveal < 1) {
+          const lg = ctx.createRadialGradient(endX, endY, 0, endX, endY, 10);
+          lg.addColorStop(0, "rgba(123,235,166,0.8)");
+          lg.addColorStop(1, "transparent");
+          ctx.fillStyle = lg;
+          ctx.beginPath();
+          ctx.arc(endX, endY, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // capture burn marker
+        ctx.save();
+        ctx.translate(capX, capY);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = `rgba(245,199,106,${arcAlpha})`;
+        ctx.fillRect(-3.4, -3.4, 6.8, 6.8);
+        ctx.restore();
+
+        // the ship, parked on the ring
+        if (reveal >= 1) {
+          const sg2 = ctx.createRadialGradient(endX, endY, 0, endX, endY, 18);
+          sg2.addColorStop(0, "rgba(123,235,166,0.6)");
+          sg2.addColorStop(1, "transparent");
+          ctx.fillStyle = sg2;
+          ctx.beginPath();
+          ctx.arc(endX, endY, 18, 0, Math.PI * 2);
+          ctx.fill();
+          // reticle — this is the ship, not a planet
+          ctx.strokeStyle = "rgba(123,235,166,0.9)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(endX, endY, 8, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = "#7beba6";
+          ctx.beginPath();
+          ctx.arc(endX, endY, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.font = "600 10px 'IBM Plex Mono', monospace";
+          const shipLabel = `EXODUS · PARKING ORBIT ${selAu.toFixed(2)} AU`;
+          ctx.strokeStyle = "rgba(3,3,4,0.9)";
+          ctx.lineWidth = 3;
+          ctx.strokeText(shipLabel, endX - 12, endY + 22);
+          ctx.fillStyle = "rgba(165,240,195,0.95)";
+          ctx.fillText(shipLabel, endX - 12, endY + 22);
+        }
+
+        // provenance — where the arc came from
+        ctx.fillStyle = "rgba(255,255,255,0.4)";
+        ctx.font = "9px 'IBM Plex Mono', monospace";
+        ctx.fillText(
+          "◀ FROM SOL — DECELERATION ARC",
+          cx - R + 8,
+          cy + 30
+        );
+      }
+
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
@@ -228,7 +354,7 @@ export function OrbitMap({
     const onClick = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const h = findNearest(e.clientX - rect.left, e.clientY - rect.top);
-      if (h) onSelect(h);
+      if (h) onSelectRef.current(h);
     };
     const onMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -244,7 +370,7 @@ export function OrbitMap({
       canvas.removeEventListener("click", onClick);
       canvas.removeEventListener("mousemove", onMove);
     };
-  }, [star, onSelect]);
+  }, [star]);
 
   return (
     <canvas
